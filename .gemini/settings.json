@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ]
+    },
+    "supabase": {
+      "httpUrl": "https://mcp.supabase.com/mcp?project_ref=ziztyklbmcgztflodvey"
+    }
+  },
+  "registries": {
+    "@acme": "https://acme.com/r/{name}.json"
+  }
+}
