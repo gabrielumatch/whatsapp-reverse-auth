@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { TokenService } from './token-service';
 import { WhatsAppBot } from './whatsapp-bot';
 
@@ -22,7 +23,16 @@ export class ApiServer {
     this.port = port;
     this.host = host;
     this.botPhoneNumber = botPhoneNumber;
+    this.setupRateLimiting();
     this.setupRoutes();
+  }
+
+  private async setupRateLimiting() {
+    await this.fastify.register(rateLimit, {
+      max: 10, // Maximum 10 requests
+      timeWindow: '1 minute', // Per minute per IP
+      cache: 10000, // Cache up to 10k IP addresses
+    });
   }
 
   private setupRoutes() {
