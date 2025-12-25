@@ -78,6 +78,7 @@ export function ChatLayout() {
           setSelectedChat={setSelectedChat}
           loadMore={loadMoreChats}
           hasMore={hasMoreChats}
+          sessionId={sessionId}
         />
       </div>
       <div className={cn("flex-1 flex flex-col overflow-hidden", isMobile && "hidden", isMobile && selectedChat && "flex")}>

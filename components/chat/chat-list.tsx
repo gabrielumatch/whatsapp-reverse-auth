@@ -1,7 +1,8 @@
-import { cn, formatRelativeTime } from "@/lib/utils";
 import { Chat } from "@/components/chat/data";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ChatListItem } from "./chat-list-item";
+import { Input } from "@/components/ui/input";
+import { IconSearch, IconLoader2 } from "@tabler/icons-react";
 
 interface ChatListProps {
   items: Chat[];
@@ -9,14 +10,19 @@ interface ChatListProps {
   setSelectedChat: (chat: Chat) => void;
   loadMore: () => void;
   hasMore: boolean;
+  sessionId: string | null;
 }
 
-export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMore }: ChatListProps) {
+export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMore, sessionId }: ChatListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Chat[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
+  // Intersection Observer for Infinite Scroll
   useEffect(() => {
     const el = bottomRef.current;
-    if (!el) return;
+    if (!el || !!search) return; // Disable observer while searching
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -32,51 +38,83 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
     return () => {
       observer.unobserve(el);
     };
-  }, [hasMore, loadMore]);
+  }, [hasMore, loadMore, search]);
+
+  // Global Search Logic
+  useEffect(() => {
+      if (!search || !sessionId) {
+          setSearchResults([]);
+          return;
+      }
+
+      const delayDebounceFn = setTimeout(async () => {
+          setIsSearching(true);
+          try {
+              const res = await fetch(`/api/search?sessionId=${sessionId}&query=${encodeURIComponent(search)}`);
+              const data = await res.json();
+              // API returns { messages, chats }. We map chats.
+              setSearchResults(data.chats.map((c: any) => ({
+                  id: c.id,
+                  session_id: c.sessionId,
+                  jid: c.jid,
+                  name: c.name,
+                  avatar_url: c.avatarUrl,
+                  last_message_at: c.lastMessageAt,
+                  last_message_content: c.lastMessageContent,
+                  unread_count: c.unreadCount
+              })));
+          } catch (e) {
+              console.error("Search failed", e);
+          } finally {
+              setIsSearching(false);
+          }
+      }, 500);
+
+      return () => clearTimeout(delayDebounceFn);
+  }, [search, sessionId]);
+
+  const displayItems = search ? searchResults : items;
 
   return (
-    <div className="flex flex-col gap-2 p-4 pt-0 overflow-y-auto max-h-[calc(100vh-200px)]">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          className={cn(
-            "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
-            selectedChat?.id === item.id && "bg-muted"
-          )}
-          onClick={() => setSelectedChat(item)}
-        >
-          <div className="flex w-full flex-col gap-1">
-            <div className="flex items-center">
-              <div className="flex items-center gap-2">
-                <Avatar>
-                  <AvatarImage src={item.avatar_url || undefined} alt={item.name} />
-                  <AvatarFallback>{item.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="font-semibold">{item.name}</div>
-              </div>
-              <div
-                className={cn(
-                  "ml-auto text-xs whitespace-nowrap",
-                  selectedChat?.id === item.id
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-                )}
-              >
-                 {item.last_message_at ? formatRelativeTime(item.last_message_at) : ''}
-              </div>
-            </div>
-            <div className="line-clamp-2 text-xs text-muted-foreground">
-              {item.last_message_content || <span className="italic">No messages yet</span>}
-            </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="p-4 border-b shrink-0">
+          <div className="relative">
+              {isSearching ? (
+                  <IconLoader2 className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+              ) : (
+                  <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              )}
+              <Input 
+                  placeholder="Search chats..." 
+                  className="pl-8 h-9" 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+              />
           </div>
-        </button>
-      ))}
-      
-      {hasMore && (
-          <div ref={bottomRef} className="h-8 flex justify-center items-center">
-              <span className="loading loading-spinner loading-sm opacity-50">Loading...</span>
-          </div>
-      )}
+      </div>
+
+      <div className="flex-1 flex flex-col gap-2 p-4 pt-2 overflow-y-auto overflow-x-hidden">
+        {displayItems.map((item) => (
+            <ChatListItem 
+                key={item.id} 
+                item={item} 
+                isSelected={selectedChat?.id === item.id} 
+                onClick={setSelectedChat} 
+            />
+        ))}
+        
+        {!search && hasMore && (
+            <div ref={bottomRef} className="h-8 flex justify-center items-center shrink-0">
+                <span className="loading loading-spinner loading-sm opacity-50"></span>
+            </div>
+        )}
+
+        {search && !isSearching && displayItems.length === 0 && (
+            <div className="text-center p-8 text-sm text-muted-foreground">
+                No chats found for &quot;{search}&quot;
+            </div>
+        )}
+      </div>
     </div>
   );
 }
