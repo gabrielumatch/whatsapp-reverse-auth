@@ -1,4 +1,4 @@
-import { WAMessage, proto } from "@whiskeysockets/baileys";
+import { WAMessage } from "@whiskeysockets/baileys";
 import { BotContext } from "../types";
 import { getOrCreateChat } from "./chat-handler";
 import { syncContact } from "./contact-handler";
@@ -8,7 +8,7 @@ import { downloadAndUploadMedia } from "./media-handler";
  * Main processor for incoming and synced messages.
  */
 export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
-    const { sessionId, sock } = ctx;
+    const { sessionId, sock, messageRepo } = ctx;
 
     if (!m.message) return;
 
@@ -57,7 +57,14 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     const chatId = await getOrCreateChat(ctx, remoteJid, contactName, text, timestamp);
     if (!chatId) return;
 
-    // 2. Check for Duplicate Message
+    // 2. Check for Duplicate Message (skip DB check, rely on create error or cache if needed)
+    // For simplicity/speed, we can check via repo if needed, but 'create' will fail on unique constraint safely.
+    // However, if we want to skip expensive media download, we should check first.
+    
+    const existing = await messageRepo.findById(sessionId, messageId);
+    if (existing) return;
+
+    // 3. Handle Media Downloads in background
     let mediaPath: string | null = null;
     if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(msgType)) {
         try {
@@ -69,21 +76,24 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     // 4. Save to Database
     try {
-        await ctx.messageRepo.create({
-        chatId,
-        sessionId,
-        messageId,
-        senderJid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
-        content: text,
-        caption: caption,
-        mediaUrl: mediaPath,
-        messageType: msgType,
-        timestamp: timestamp,
-        isFromMe: isFromMe,
-        status: "delivered", 
-    });
+        await messageRepo.create({
+            chatId,
+            sessionId,
+            messageId,
+            senderJid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
+            content: text,
+            caption: caption,
+            mediaUrl: mediaPath,
+            messageType: msgType,
+            timestamp: timestamp,
+            isFromMe: isFromMe,
+            status: "delivered", 
+        });
+    } catch (err) {
+        console.error("Error saving message:", err);
+    }
 
-    // 4. Background: Sync Contact Info
+    // 5. Background: Sync Contact Info
     if (!isFromMe) {
         syncContact(ctx, remoteJid, contactName).catch(() => {});
     }
