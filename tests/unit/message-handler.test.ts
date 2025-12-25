@@ -35,7 +35,8 @@ describe('MessageHandler', () => {
         mockCtx = {
             sessionId: 'test_session',
             sock: { user: { id: 'me@s.whatsapp.net' } },
-            messageRepo: mockMessageRepo
+            messageRepo: mockMessageRepo,
+            redis: { publish: vi.fn() }
         } as unknown as BotContext;
     });
 

@@ -21,6 +21,7 @@ This project implements a "Reverse WhatsApp Auth" system. Instead of the traditi
 ## Architecture & Patterns
 -   **Repository Pattern:** All DB interactions are encapsulated in `lib/whatsapp/repositories/`. No direct Prisma calls in handlers.
 -   **Worker Queue:** Incoming messages are pushed to Redis (`queue:messages`) and processed in batches by `MessageProcessor`. This handles high-volume history syncs efficiently.
+-   **Realtime Updates:** Uses Redis Pub/Sub + Server-Sent Events (SSE) for messages and chat list updates. Replaces Supabase Realtime/Polling for Docker compatibility.
 -   **API Layer:** The Frontend communicates with the Backend via Next.js API Routes (`/api/...`), which poll the Postgres DB.
 -   **Component Design:** Chat UI is modularized (`ChatDisplay` -> `ChatHeader`, `MessageBubble`, `ChatDetails`).
 

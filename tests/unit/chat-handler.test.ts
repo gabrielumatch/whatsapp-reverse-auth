@@ -10,7 +10,8 @@ describe('ChatHandler', () => {
         mockChatRepo = { upsertChat: vi.fn() };
         mockCtx = {
             sessionId: 'test_session',
-            chatRepo: mockChatRepo
+            chatRepo: mockChatRepo,
+            redis: { publish: vi.fn() }
         };
     });
 
