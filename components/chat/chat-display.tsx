@@ -20,6 +20,8 @@ interface ChatDisplayProps {
   sendMessage: (message: string) => void;
   isMobile: boolean;
   isTyping?: boolean;
+  loadMore: () => void;
+  hasMore: boolean;
 }
 
 export function ChatDisplay({
@@ -28,16 +30,43 @@ export function ChatDisplay({
   sendMessage,
   isMobile,
   isTyping,
+  loadMore,
+  hasMore
 }: ChatDisplayProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      },
+      { threshold: 1 }
+    );
+
+    if (topRef.current) {
+      observer.observe(topRef.current);
+    }
+
+    return () => {
+      if (topRef.current) {
+        observer.unobserve(topRef.current);
+      }
+    };
+  }, [hasMore, loadMore]);
+
+  useEffect(() => {
+    // Only scroll to bottom on initial load
+    if (messages.length > 0 && messages.length <= 50) {
+        scrollToBottom();
+    }
+  }, [messages.length]);
 
   const renderMessageContent = (message: Message) => {
     // Media URL construction
@@ -78,7 +107,7 @@ export function ChatDisplay({
               {isTyping ? (
                  <span className="text-primary font-medium animate-pulse">Typing...</span>
               ) : (
-                <span className="text-muted-foreground">Online</span> // Fallback for now
+                <span className="text-muted-foreground">Online</span>
               )}
             </div>
           </div>
@@ -98,6 +127,11 @@ export function ChatDisplay({
 
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-muted/20 relative">
          <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:16px_16px] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)]"></div>
+        
+        {hasMore && <div ref={topRef} className="h-4 w-full flex justify-center items-center">
+            <span className="loading loading-spinner loading-xs opacity-50"></span>
+        </div>}
+
         <AnimatePresence>
           {messages.map((message, index) => (
             <motion.div

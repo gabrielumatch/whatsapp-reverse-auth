@@ -85,7 +85,11 @@ export function useWhatsAppMessages(chatId: string | null) {
           if (olderMessages.length < 50) setHasMore(false);
           
           if (olderMessages.length > 0) {
-              setMessages(prev => [...olderMessages, ...prev]);
+              setMessages(prev => {
+                  const existingIds = new Set(prev.map(m => m.id));
+                  const uniqueOlder = olderMessages.filter((m: Message) => !existingIds.has(m.id));
+                  return [...uniqueOlder, ...prev];
+              });
           }
       } catch (e) {
           console.error(e);

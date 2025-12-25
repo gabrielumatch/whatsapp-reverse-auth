@@ -1,16 +1,42 @@
 import { cn } from "@/lib/utils";
 import { Chat } from "@/components/chat/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useRef } from "react";
 
 interface ChatListProps {
   items: Chat[];
   selectedChat: Chat | null;
   setSelectedChat: (chat: Chat) => void;
+  loadMore: () => void;
+  hasMore: boolean;
 }
 
-export function ChatList({ items, selectedChat, setSelectedChat }: ChatListProps) {
+export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMore }: ChatListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (bottomRef.current) {
+      observer.observe(bottomRef.current);
+    }
+
+    return () => {
+      if (bottomRef.current) {
+        observer.unobserve(bottomRef.current);
+      }
+    };
+  }, [hasMore, loadMore]);
+
   return (
-    <div className="flex flex-col gap-2 p-4 pt-0">
+    <div className="flex flex-col gap-2 p-4 pt-0 overflow-y-auto max-h-[calc(100vh-200px)]">
       {items.map((item) => (
         <button
           key={item.id}
@@ -46,6 +72,12 @@ export function ChatList({ items, selectedChat, setSelectedChat }: ChatListProps
           </div>
         </button>
       ))}
+      
+      {hasMore && (
+          <div ref={bottomRef} className="h-8 flex justify-center items-center">
+              <span className="loading loading-spinner loading-sm opacity-50">Loading...</span>
+          </div>
+      )}
     </div>
   );
 }

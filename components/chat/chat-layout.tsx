@@ -12,8 +12,8 @@ export function ChatLayout() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  const { chats, sessionId } = useWhatsAppChats();
-  const { messages } = useWhatsAppMessages(selectedChat?.id || null);
+  const { chats, sessionId, loadMore: loadMoreChats, hasMore: hasMoreChats } = useWhatsAppChats();
+  const { messages, loadMore, hasMore } = useWhatsAppMessages(selectedChat?.id || null);
 
   useEffect(() => {
     const checkScreenWidth = () => {
@@ -56,7 +56,7 @@ export function ChatLayout() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
+
         if (!res.ok) {
             const err = await res.json();
             console.error("Failed to send message:", err);
@@ -76,6 +76,8 @@ export function ChatLayout() {
           items={chats}
           selectedChat={selectedChat}
           setSelectedChat={setSelectedChat}
+          loadMore={loadMoreChats}
+          hasMore={hasMoreChats}
         />
       </div>
       <div className={cn("flex-1 flex flex-col overflow-hidden", isMobile && "hidden", isMobile && selectedChat && "flex")}>
@@ -85,6 +87,8 @@ export function ChatLayout() {
             messages={messages}
             sendMessage={sendMessage}
             isMobile={isMobile}
+            loadMore={loadMore}
+            hasMore={hasMore}
             />
         ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
