@@ -45,4 +45,33 @@ describe('Integration: Redis SSE Pub/Sub', () => {
             }
         });
     });
+
+    it('should receive a chat update via Redis Pub/Sub channel', () => {
+        return new Promise<void>(async (resolve, reject) => {
+            const TEST_SESSION_ID = "test-session-uuid";
+            const channel = `updates:session:${TEST_SESSION_ID}`;
+            const testData = { id: 'chat-1', name: 'New Chat', lastMessageContent: 'Hello' };
+
+            // Set up subscriber
+            subscriber.on('message', (chan, message) => {
+                try {
+                    if (chan === channel) {
+                        const parsed = JSON.parse(message);
+                        expect(parsed.name).toBe(testData.name);
+                        resolve();
+                    }
+                } catch (e) {
+                    reject(e);
+                }
+            });
+
+            try {
+                await subscriber.subscribe(channel);
+                // Publish after subscription is active
+                await publisher.publish(channel, JSON.stringify(testData));
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
 });

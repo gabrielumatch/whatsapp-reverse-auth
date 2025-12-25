@@ -75,33 +75,51 @@ export function useWhatsAppChats() {
       }
   };
 
-  // 3. Poll for updates (Head only)
+  // Realtime subscription (SSE)
   useEffect(() => {
       if (!sessionId) return;
-      
-      const interval = setInterval(async () => {
-          // Fetch latest 20 to check for new messages/chats
-          const latest = await fetchChats(sessionId);
-          
-          setChats(prev => {
-              // Create a map of existing chats for quick lookup
-              const existingMap = new Map(prev.map(c => [c.id, c]));
-              
-              // Update/Add latest chats
-              latest.forEach((chat: Chat) => {
-                  existingMap.set(chat.id, chat);
-              });
-              
-              // Convert back to array and sort
-              // Note: This effectively keeps ALL loaded chats but updates the top ones.
-              return Array.from(existingMap.values()).sort((a, b) => 
-                  new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
-              );
-          });
-      }, 10000);
 
-      return () => clearInterval(interval);
-  }, [sessionId, fetchChats]);
+      const eventSource = new EventSource(`/api/stream/chats?sessionId=${sessionId}`);
+
+      eventSource.onmessage = (event) => {
+          try {
+              // Raw Prisma object (camelCase)
+              const rawChat = JSON.parse(event.data);
+              
+              // Map to Frontend Interface (snake_case)
+              const updatedChat: Chat = {
+                  id: rawChat.id,
+                  session_id: rawChat.sessionId,
+                  jid: rawChat.jid,
+                  name: rawChat.name,
+                  avatar_url: rawChat.avatarUrl,
+                  unread_count: rawChat.unreadCount,
+                  last_message_content: rawChat.lastMessageContent,
+                  last_message_at: rawChat.lastMessageAt
+              };
+
+              setChats(prev => {
+                  const map = new Map(prev.map(c => [c.id, c]));
+                  map.set(updatedChat.id, updatedChat);
+                  
+                  return Array.from(map.values()).sort((a, b) => 
+                      new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+                  );
+              });
+
+          } catch (e) {
+              console.error("Failed to parse SSE chat update:", e);
+          }
+      };
+
+      eventSource.onerror = (err) => {
+          console.error("SSE Chat Error:", err);
+      };
+
+      return () => {
+          eventSource.close();
+      };
+  }, [sessionId]);
 
   return { chats, sessionId, loading, loadMore, hasMore };
 }

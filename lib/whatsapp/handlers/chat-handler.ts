@@ -15,5 +15,8 @@ export async function getOrCreateChat(
         timestamp
     });
 
+    // Publish chat update to Redis
+    await ctx.redis.publish(`updates:session:${sessionId}`, JSON.stringify(chat));
+
     return chat.id;
 }
