@@ -62,7 +62,7 @@ const data = {
     },
     {
       title: "Github",
-      url: "https://github.com/gabrielumatch?tab=repositories",
+      url: "https://github.com/gabrielumatch/whatsapp-reverse-auth",
       icon: IconBrandGithub,
       external: true,
     },
