@@ -1,5 +1,6 @@
 import { Message } from "@/components/chat/data";
 import React from "react";
+import Image from "next/image";
 
 interface ChatMediaGridProps {
   media: Message[];
@@ -19,11 +20,12 @@ export function ChatMediaGrid({ media, onImageClick }: ChatMediaGridProps) {
         
         return (
             <div key={m.id} className="aspect-square relative cursor-pointer hover:opacity-80" onClick={() => onImageClick(url)}>
-            <img 
-                src={url} 
-                className="object-cover w-full h-full rounded-md"
-                alt="media"
-            />
+                <Image 
+                    src={url} 
+                    alt="media"
+                    fill
+                    className="object-cover rounded-md"
+                />
             </div>
         );
       })}

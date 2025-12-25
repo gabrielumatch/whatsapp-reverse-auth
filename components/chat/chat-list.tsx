@@ -13,6 +13,17 @@ interface ChatListProps {
   sessionId: string | null;
 }
 
+interface SearchChat {
+    id: string;
+    sessionId: string;
+    jid: string;
+    name: string | null;
+    avatarUrl: string | null;
+    lastMessageAt: string | null;
+    lastMessageContent: string | null;
+    unreadCount: number | null;
+}
+
 export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMore, sessionId }: ChatListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
@@ -53,7 +64,7 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
               const res = await fetch(`/api/search?sessionId=${sessionId}&query=${encodeURIComponent(search)}`);
               const data = await res.json();
               // API returns { messages, chats }. We map chats.
-              setSearchResults(data.chats.map((c: any) => ({
+              setSearchResults(data.chats.map((c: SearchChat) => ({
                   id: c.id,
                   session_id: c.sessionId,
                   jid: c.jid,

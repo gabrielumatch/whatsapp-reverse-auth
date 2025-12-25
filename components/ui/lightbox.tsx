@@ -2,6 +2,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import Image from "next/image";
 
 interface LightboxProps {
   src: string | null;
@@ -22,11 +23,13 @@ export function Lightbox({ src, onClose }: LightboxProps) {
           <X className="w-6 h-6" />
         </DialogClose>
         
-        <div className="relative w-full h-full flex items-center justify-center p-4">
-          <img 
+        <div className="relative w-full h-full p-4">
+          <Image 
             src={src} 
             alt="Fullscreen" 
-            className="max-w-full max-h-full object-contain" 
+            fill
+            className="object-contain" 
+            unoptimized
           />
         </div>
       </DialogContent>
