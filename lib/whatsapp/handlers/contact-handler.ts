@@ -1,5 +1,9 @@
 import { BotContext } from "../types";
+import { checkRLSError } from "../utils";
 
+/**
+ * Syncs profile picture and bio from WhatsApp to Supabase.
+ */
 export async function syncContact(ctx: BotContext, jid: string, pushName?: string | null) {
     const { supabase, sessionId, sock } = ctx;
 
@@ -8,18 +12,21 @@ export async function syncContact(ctx: BotContext, jid: string, pushName?: strin
         let profilePicUrl: string | null = null;
         try {
             profilePicUrl = await sock.profilePictureUrl(jid, "image");
-        } catch (err) {
-            // 401/404 means no profile pic or privacy settings
-            // console.log("Failed to fetch profile pic for", jid, err); 
+        } catch (err: any) {
+            // Silently handle 401/404 - common for privacy settings
         }
 
         // 2. Fetch Status (About)
         let about: string | null = null;
         try {
             const statusData = await sock.fetchStatus(jid);
-            about = statusData?.status || null;
-        } catch (err) {
-             // console.log("Failed to fetch status for", jid, err);
+            // Safer access for USync result
+            if (statusData && Array.isArray(statusData) && statusData.length > 0) {
+                const firstResult = statusData[0] as any;
+                about = firstResult?.status || null;
+            }
+        } catch (err: any) {
+             // Silently handle 401
         }
 
         // 3. Upsert into whatsapp_contacts
@@ -35,19 +42,21 @@ export async function syncContact(ctx: BotContext, jid: string, pushName?: strin
             }, { onConflict: 'session_id, jid' });
 
         if (contactError) {
-            console.error("Error upserting contact:", contactError);
+            checkRLSError(contactError);
         }
 
         // 4. Update whatsapp_chats avatar if available
         if (profilePicUrl) {
-            await supabase
+            const { error: updateError } = await supabase
                 .from("whatsapp_chats")
                 .update({ avatar_url: profilePicUrl })
                 .eq("session_id", sessionId)
                 .eq("jid", jid);
+            
+            if (updateError) checkRLSError(updateError);
         }
 
     } catch (e) {
-        console.error("Error syncing contact:", jid, e);
+        console.error("Non-critical error syncing contact:", jid, e);
     }
 }

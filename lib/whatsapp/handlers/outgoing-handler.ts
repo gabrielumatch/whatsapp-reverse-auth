@@ -1,4 +1,5 @@
 import { BotContext, WebMessage } from "../types";
+import { checkRLSError } from "../utils";
 
 export function setupOutgoingMessageListener(ctx: BotContext) {
     const { supabase, sessionId, sock } = ctx;
@@ -23,11 +24,13 @@ export function setupOutgoingMessageListener(ctx: BotContext) {
                     console.log("Processing outgoing message:", newMsg.id);
 
                     // 1. Get Chat JID
-                    const { data: chat } = await supabase
+                    const { data: chat, error: loadError } = await supabase
                         .from("whatsapp_chats")
                         .select("jid")
                         .eq("id", newMsg.chat_id)
                         .single();
+                    
+                    if (loadError) checkRLSError(loadError);
 
                     if (chat && chat.jid) {
                         try {
@@ -37,13 +40,15 @@ export function setupOutgoingMessageListener(ctx: BotContext) {
 
                             // 3. Update status and message_id
                             if (sentMsg?.key.id) {
-                                await supabase
+                                const { error: updateError } = await supabase
                                     .from("whatsapp_messages")
                                     .update({
                                         status: "delivered",
                                         message_id: sentMsg.key.id
                                     })
                                     .eq("id", newMsg.id);
+                                
+                                if (updateError) checkRLSError(updateError);
                             }
 
                         } catch (err) {

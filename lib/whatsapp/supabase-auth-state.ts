@@ -7,6 +7,7 @@ import {
 } from "@whiskeysockets/baileys";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "@/lib/supabase/database.types";
+import { checkRLSError } from "./utils";
 
 export type SupabaseAuthState = {
     state: AuthenticationState;
@@ -20,13 +21,17 @@ export type SupabaseAuthState = {
 export const getSupabaseAuthState = async (supabase: SupabaseClient<Database>, sessionId: string) => {
     
     // 1. Load or Initialize Credentials
-    const { data: credsData } = await supabase
+    const { data: credsData, error: loadError } = await supabase
         .from("whatsapp_auth_keys")
         .select("data")
         .eq("session_id", sessionId)
         .eq("type", "creds")
         .eq("key_id", "default")
         .single();
+    
+    if (loadError && loadError.code !== 'PGRST116') {
+        checkRLSError(loadError);
+    }
 
     let creds: AuthenticationCreds;
     if (credsData) {
@@ -38,7 +43,7 @@ export const getSupabaseAuthState = async (supabase: SupabaseClient<Database>, s
     // 2. Helper to save data to Supabase
     const writeData = async (data: any, type: string, keyId: string) => {
         const str = JSON.stringify(data, BufferJSON.replacer);
-        await supabase
+        const { error } = await supabase
             .from("whatsapp_auth_keys")
             .upsert({
                 session_id: sessionId,
@@ -47,6 +52,11 @@ export const getSupabaseAuthState = async (supabase: SupabaseClient<Database>, s
                 data: str,
                 updated_at: new Date().toISOString()
             }, { onConflict: "session_id,type,key_id" });
+        
+        if (error) {
+            console.error("Failed to save auth key:", error);
+            checkRLSError(error);
+        }
     };
 
     const removeData = async (type: string, keyId: string) => {
@@ -81,19 +91,25 @@ export const getSupabaseAuthState = async (supabase: SupabaseClient<Database>, s
                     return data;
                 },
                 set: async (data) => {
-                    const tasks: Promise<void>[] = [];
+                    const tasks: (() => Promise<void>)[] = [];
                     for (const category in data) {
                         const type = category as keyof SignalDataTypeMap;
                         for (const id in data[type]) {
                             const value = data[type]?.[id];
                             if (value) {
-                                tasks.push(writeData(value, type, id));
+                                tasks.push(() => writeData(value, type, id));
                             } else {
-                                tasks.push(removeData(type, id));
+                                tasks.push(() => removeData(type, id));
                             }
                         }
                     }
-                    await Promise.all(tasks);
+                    
+                    // Execute tasks with concurrency limit
+                    const BATCH_SIZE = 50;
+                    for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
+                        const batch = tasks.slice(i, i + BATCH_SIZE);
+                        await Promise.all(batch.map(task => task()));
+                    }
                 },
             },
         },

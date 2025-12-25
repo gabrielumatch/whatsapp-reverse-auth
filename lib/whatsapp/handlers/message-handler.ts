@@ -1,10 +1,13 @@
-import { WAMessage } from "@whiskeysockets/baileys";
+import { WAMessage, proto } from "@whiskeysockets/baileys";
 import { BotContext } from "../types";
 import { getOrCreateChat } from "./chat-handler";
 import { syncContact } from "./contact-handler";
 import { downloadAndUploadMedia } from "./media-handler";
-import Long from "long";
+import { checkRLSError } from "../utils";
 
+/**
+ * Main processor for incoming and synced messages.
+ */
 export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     const { supabase, sessionId, sock } = ctx;
 
@@ -17,10 +20,10 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     if (!remoteJid || !messageId) return;
 
-    // Extract content
+    // Extract Message Type and Content
     const msgType = Object.keys(m.message)[0];
     
-    // Text extraction logic
+    // Improved Text Extraction
     let text = "";
     let caption = null;
 
@@ -34,37 +37,50 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     } else if (msgType === 'videoMessage') {
         caption = m.message.videoMessage?.caption || null;
         text = caption || "🎥 Video";
+    } else if (msgType === 'documentMessage') {
+        caption = m.message.documentMessage?.caption || null;
+        text = m.message.documentMessage?.fileName || "📄 Document";
+    } else if (msgType === 'audioMessage') {
+        text = "🎵 Audio";
+    } else if (msgType === 'stickerMessage') {
+        text = "🏷️ Sticker";
+    } else if (msgType === 'buttonsMessage' || msgType === 'viewOnceMessage' || msgType === 'viewOnceMessageV2') {
+        text = "🔘 Interactive Message";
     } else {
-        text = msgType;
+        text = msgType; // Fallback to type name
     }
 
-    console.log(`Received message from ${remoteJid}: ${text}`);
-
-    // Determine Push Name logic for Chat Naming
+    // Determine Display Name logic
     const contactName = !isFromMe ? m.pushName : null;
 
-    // 1. Get or Create Chat
+    // 1. Get or Create Chat Record
     const chatId = await getOrCreateChat(ctx, remoteJid, contactName, text);
-
     if (!chatId) return;
 
-    // 2. Check duplicate message
-    const { data: existing } = await supabase
+    // 2. Check for Duplicate Message (especially important for syncs)
+    const { data: existing, error: dupError } = await supabase
         .from("whatsapp_messages")
         .select("id")
         .eq("session_id", sessionId)
         .eq("message_id", messageId)
         .single();
-
+    
+    if (dupError && dupError.code !== 'PGRST116') {
+        checkRLSError(dupError);
+    }
     if (existing) return;
 
-    // 3. Handle Media Download
+    // 3. Handle Media Downloads in background
     let mediaPath: string | null = null;
     if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(msgType)) {
-        mediaPath = await downloadAndUploadMedia(ctx, m);
+        try {
+            mediaPath = await downloadAndUploadMedia(ctx, m);
+        } catch (err) {
+            console.error("Failed to download/upload media:", err);
+        }
     }
 
-    // 4. Insert Message
+    // 4. Save to Database
     const timestamp = getMessageTimestamp(m.messageTimestamp);
     
     const { error: msgError } = await supabase
@@ -74,9 +90,9 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
             session_id: sessionId,
             message_id: messageId,
             sender_jid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
-            content: text, // Display text (caption or placeholder)
+            content: text,
             caption: caption,
-            media_url: mediaPath, // Path in bucket
+            media_url: mediaPath,
             message_type: msgType,
             timestamp: timestamp.toISOString(),
             is_from_me: isFromMe,
@@ -84,26 +100,34 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         });
 
     if (msgError) {
-        console.error("Error saving message:", msgError);
+        checkRLSError(msgError);
     }
 
-    // 5. Background: Sync Contact Info (Profile Pic, About)
+    // 5. Background: Sync Contact Info
     if (!isFromMe) {
-        // Fire and forget - don't await
-        syncContact(ctx, remoteJid, contactName).catch(err => 
-            console.error("Background sync failed:", err)
-        );
+        syncContact(ctx, remoteJid, contactName).catch(() => {});
     }
 }
 
-function getMessageTimestamp(ts: number | Long | null | undefined): Date {
+/**
+ * Safely converts Baileys timestamp (number or Long) to JS Date.
+ */
+function getMessageTimestamp(ts: number | any | null | undefined): Date {
+    if (!ts) return new Date();
+    
     if (typeof ts === 'number') {
         return new Date(ts * 1000);
     }
-    // Handle Long object (has low/high or toNumber)
-    if (ts && typeof ts === 'object' && 'toNumber' in ts && typeof (ts as { toNumber: unknown }).toNumber === 'function') {
-        return new Date((ts as { toNumber: () => number }).toNumber() * 1000);
+    
+    // Handle Long objects (from protobuf)
+    if (typeof ts === 'object') {
+        if (typeof ts.toNumber === 'function') {
+            return new Date(ts.toNumber() * 1000);
+        }
+        if (typeof ts.low === 'number') {
+            return new Date(ts.low * 1000);
+        }
     }
-    // Fallback to now if missing
+    
     return new Date();
 }

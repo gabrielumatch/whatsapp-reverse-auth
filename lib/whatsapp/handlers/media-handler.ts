@@ -1,9 +1,9 @@
 import { WAMessage, downloadMediaMessage } from "@whiskeysockets/baileys";
 import { BotContext } from "../types";
-import { Readable } from "stream";
+import { checkRLSError } from "../utils";
 
 export async function downloadAndUploadMedia(ctx: BotContext, m: WAMessage): Promise<string | null> {
-    const { supabase, sock, sessionId } = ctx;
+    const { supabase, sessionId } = ctx;
 
     try {
         const messageType = Object.keys(m.message || {})[0];
@@ -18,7 +18,7 @@ export async function downloadAndUploadMedia(ctx: BotContext, m: WAMessage): Pro
         const buffer = await downloadMediaMessage(
             m,
             'buffer',
-            { logger: ctx.sock.logger }
+            {}
         );
 
         if (!buffer) return null;
@@ -38,13 +38,18 @@ export async function downloadAndUploadMedia(ctx: BotContext, m: WAMessage): Pro
 
         if (error) {
             console.error("Failed to upload media:", error);
+            checkRLSError(error);
             return null;
         }
 
         return data.path; // Return the storage path (e.g. "session_id/msg_id.jpg")
 
-    } catch (err) {
-        console.error("Error handling media:", err);
+    } catch (err: any) {
+        if (err?.output?.statusCode === 403 || err?.output?.statusCode === 404 || err?.output?.statusCode === 410) {
+            console.log(`Media unavailable (${messageType}):`, err.output.statusCode);
+            return null;
+        }
+        console.error("Error handling media:", err.message || err);
         return null;
     }
 }

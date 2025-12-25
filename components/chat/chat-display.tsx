@@ -43,7 +43,7 @@ export function ChatDisplay({
       <div className="flex items-center justify-between p-4 border-b bg-background z-10">
         <div className="flex items-center gap-2">
           <Avatar>
-            <AvatarImage src={selectedChat.avatar_url || ""} alt={selectedChat.name} />
+            <AvatarImage src={selectedChat.avatar_url || undefined} alt={selectedChat.name} />
             <AvatarFallback>{selectedChat.name.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">

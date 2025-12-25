@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id           String    @id @map("session_id")
+  status       String    @default("disconnected")
+  phoneNumber  String?   @map("phone_number")
+  qrCode       String?   @map("qr_code")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  chats        Chat[]
+  messages     Message[]
+  contacts     Contact[]
+
+  @@map("whatsapp_sessions")
+}
+
+model Chat {
+  id                 String    @id @default(uuid())
+  sessionId          String    @map("session_id")
+  jid                String
+  name               String?
+  avatarUrl          String?   @map("avatar_url")
+  lastMessageAt      DateTime? @map("last_message_at")
+  lastMessageContent String?   @map("last_message_content")
+  unreadCount        Int       @default(0) @map("unread_count")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  session            Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messages           Message[]
+
+  @@unique([sessionId, jid])
+  @@map("whatsapp_chats")
+}
+
+model Contact {
+  id                String    @id @default(uuid())
+  sessionId         String    @map("session_id")
+  jid               String
+  name              String?
+  about             String?
+  profilePictureUrl String?   @map("profile_picture_url")
+  lastSeen          DateTime? @map("last_seen")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  session           Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, jid])
+  @@map("whatsapp_contacts")
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  chatId      String   @map("chat_id")
+  sessionId   String   @map("session_id")
+  messageId   String?  @map("message_id")
+  senderJid   String   @map("sender_jid")
+  content     String?
+  caption     String?
+  mediaUrl    String?  @map("media_url")
+  messageType String?  @map("message_type")
+  timestamp   DateTime @default(now())
+  status      String   @default("sent") // sent, delivered, read
+  isFromMe    Boolean  @default(false) @map("is_from_me")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, messageId])
+  @@map("whatsapp_messages")
+}

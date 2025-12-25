@@ -24,7 +24,7 @@ export function ChatList({ items, selectedChat, setSelectedChat }: ChatListProps
             <div className="flex items-center">
               <div className="flex items-center gap-2">
                 <Avatar>
-                  <AvatarImage src={item.avatar_url || ""} alt={item.name} />
+                  <AvatarImage src={item.avatar_url || undefined} alt={item.name} />
                   <AvatarFallback>{item.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="font-semibold">{item.name}</div>
