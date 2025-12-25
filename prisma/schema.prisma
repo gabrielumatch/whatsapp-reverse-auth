@@ -38,6 +38,7 @@ model Chat {
   messages           Message[]
 
   @@unique([sessionId, jid])
+  @@index([sessionId, lastMessageAt(sort: Desc)])
   @@map("whatsapp_chats")
 }
 
@@ -77,5 +78,7 @@ model Message {
   session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, messageId])
+  @@index([chatId, timestamp(sort: Desc)])
+  @@index([sessionId])
   @@map("whatsapp_messages")
 }

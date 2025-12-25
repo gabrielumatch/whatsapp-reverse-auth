@@ -12,8 +12,6 @@ export async function GET(
         return new NextResponse("Invalid path", { status: 400 });
     }
 
-    // Example path: whatsapp-media/session_id/msg_id.jpg
-    // We only care about session_id/msg_id.jpg
     const relativePath = urlPath.slice(1).join("/");
     const absolutePath = path.join(process.cwd(), 'storage', 'whatsapp-media', relativePath);
 
@@ -22,7 +20,7 @@ export async function GET(
     }
 
     try {
-        const fileBuffer = fs.readFileSync(absolutePath);
+        const stats = fs.statSync(absolutePath);
         const ext = path.extname(absolutePath).toLowerCase();
         
         const mimeTypes: { [key: string]: string } = {
@@ -32,11 +30,26 @@ export async function GET(
             '.mp4': 'video/mp4',
             '.mp3': 'audio/mpeg',
             '.pdf': 'application/pdf',
+            '.webp': 'image/webp',
         };
 
-        return new NextResponse(fileBuffer, {
+        // Create a Web ReadableStream from the Node.js ReadStream
+        const nodeStream = fs.createReadStream(absolutePath);
+        const stream = new ReadableStream({
+            start(controller) {
+                nodeStream.on('data', (chunk) => controller.enqueue(chunk));
+                nodeStream.on('end', () => controller.close());
+                nodeStream.on('error', (err) => controller.error(err));
+            },
+            cancel() {
+                nodeStream.destroy();
+            }
+        });
+
+        return new NextResponse(stream, {
             headers: {
                 "Content-Type": mimeTypes[ext] || "application/octet-stream",
+                "Content-Length": stats.size.toString(),
                 "Cache-Control": "public, max-age=31536000, immutable"
             }
         });
