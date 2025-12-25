@@ -10,6 +10,7 @@ A Node.js/TypeScript microservice that provides reverse authentication via Whats
 - 🔄 **Auto-Reconnect**: Automatic reconnection with exponential backoff
 - 🐳 **Docker Support**: Alpine-based Docker image for low memory footprint
 - ⚡ **Fastify**: High-performance web framework
+- 🛡️ **Rate Limiting**: Built-in rate limiting to prevent abuse (10 req/min globally, 5 req/min for token verification)
 - 📊 **Health Monitoring**: Built-in health check endpoint
 
 ## Architecture
@@ -227,6 +228,8 @@ The bot implements robust auto-reconnection:
 - Tokens expire after 10 minutes
 - Tokens are single-use (deleted after verification)
 - No token storage in database (in-memory only)
+- Rate limiting: 10 requests per minute per IP globally
+- Token verification endpoint limited to 5 requests per minute per IP
 - Non-root user in Docker container
 - HTTPS recommended for webhook endpoint
 
