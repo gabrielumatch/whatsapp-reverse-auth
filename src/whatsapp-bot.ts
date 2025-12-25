@@ -57,7 +57,7 @@ export class WhatsAppBot {
       this.logger.info('WhatsApp bot started successfully');
     } catch (error) {
       this.logger.error({ error }, 'Error starting WhatsApp bot');
-      await this.handleReconnect();
+      this.handleReconnect();
     }
   }
 
@@ -79,7 +79,7 @@ export class WhatsAppBot {
     }
   }
 
-  private async handleReconnect() {
+  private handleReconnect() {
     if (!this.shouldReconnect) {
       return;
     }
@@ -95,7 +95,9 @@ export class WhatsAppBot {
     this.logger.info(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
-      this.connectToWhatsApp();
+      this.connectToWhatsApp().catch((error) => {
+        this.logger.error({ error }, 'Error during reconnection');
+      });
     }, delay);
   }
 
