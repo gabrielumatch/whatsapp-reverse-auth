@@ -1,8 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { mapMessageToDto } from "@/lib/mappers";
 
-export async function getMessages(chatId: string, limit = 50, cursor?: string) {
+export async function getMessages(
+    chatId: string, 
+    limit = 50, 
+    cursor?: string, 
+    filters?: { type?: string; search?: string }
+) {
     const whereClause: Prisma.MessageWhereInput = { chatId };
+
+    if (filters?.type) {
+        whereClause.messageType = filters.type;
+    }
+    
+    if (filters?.search) {
+        whereClause.content = {
+            contains: filters.search,
+            mode: 'insensitive'
+        };
+    }
 
     const messages = await prisma.message.findMany({
         where: whereClause,
@@ -16,17 +33,5 @@ export async function getMessages(chatId: string, limit = 50, cursor?: string) {
     // NOTE: This might be suboptimal for infinite scroll logic, but we match existing API.
     const reversed = messages.reverse();
 
-    return reversed.map(m => ({
-        id: m.id,
-        chat_id: m.chatId,
-        session_id: m.sessionId,
-        sender_jid: m.senderJid,
-        content: m.content,
-        caption: m.caption,
-        media_url: m.mediaUrl,
-        message_type: m.messageType,
-        timestamp: m.timestamp,
-        status: m.status,
-        is_from_me: m.isFromMe
-    }));
+    return reversed.map(mapMessageToDto);
 }

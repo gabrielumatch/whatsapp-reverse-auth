@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mapChatToDto } from "@/lib/mappers";
 
 interface RawChat {
     id: string;
@@ -38,14 +39,5 @@ export async function getChats(sessionId: string, limit = 20, cursor?: string) {
         LIMIT ${limit}
     `;
 
-    return chats.map(c => ({
-        id: c.id,
-        session_id: c.session_id,
-        jid: c.jid,
-        name: c.name,
-        avatar_url: c.avatar_url,
-        last_message_at: c.last_message_at,
-        last_message_content: c.last_message_content,
-        unread_count: c.unread_count || 0
-    }));
+    return chats.map(mapChatToDto);
 }

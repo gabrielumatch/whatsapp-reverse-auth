@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { mapChatToDto, mapMessageToDto } from "@/lib/mappers";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
             take: 10
         });
 
-        return NextResponse.json({ messages, chats });
+        return NextResponse.json({ 
+            messages: messages.map(mapMessageToDto), 
+            chats: chats.map(mapChatToDto) 
+        });
     } catch (error) {
         console.error(error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

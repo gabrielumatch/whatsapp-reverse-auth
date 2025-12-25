@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { getMessages } from "@/lib/data/get-messages";
+import { mapMessageToDto } from "@/lib/mappers";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -15,46 +16,13 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const whereClause: Prisma.MessageWhereInput = { chatId };
-        
-        if (type) {
-            whereClause.messageType = type;
-        }
-        
-        if (search) {
-            whereClause.content = {
-                contains: search,
-                mode: 'insensitive'
-            };
-        }
-
-        const messages = await prisma.message.findMany({
-            where: whereClause,
-            take: limit,
-            skip: cursor ? 1 : 0,
-            cursor: cursor ? { id: cursor } : undefined,
-            orderBy: { timestamp: 'desc' }
-        });
-
-        // Reverse to show oldest -> newest
-        const reversed = messages.reverse();
-
-        // Map Prisma fields
-        const mapped = reversed.map(m => ({
-            id: m.id,
-            chat_id: m.chatId,
-            session_id: m.sessionId,
-            sender_jid: m.senderJid,
-            content: m.content,
-            caption: m.caption,
-            media_url: m.mediaUrl,
-            message_type: m.messageType,
-            timestamp: m.timestamp,
-            status: m.status,
-            is_from_me: m.isFromMe
-        }));
-
-        return NextResponse.json(mapped);
+        const messages = await getMessages(
+            chatId, 
+            limit, 
+            cursor || undefined, 
+            { type: type || undefined, search: search || undefined }
+        );
+        return NextResponse.json(messages);
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
@@ -85,7 +53,7 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        return NextResponse.json({ success: true, message: newMessage });
+        return NextResponse.json({ success: true, message: mapMessageToDto(newMessage) });
 
     } catch (error) {
         console.error("Send Error:", error);
