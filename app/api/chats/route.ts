@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChats } from "@/lib/data/get-chats";
 import { z } from "zod";
+import { apiHandler } from "@/lib/api-handler";
 
 const querySchema = z.object({
     sessionId: z.string(),
@@ -9,20 +10,11 @@ const querySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const result = querySchema.safeParse(searchParams);
+    return apiHandler(async () => {
+        const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+        const { sessionId, limit, cursor } = querySchema.parse(searchParams);
 
-    if (!result.success) {
-        return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
-    }
-
-    const { sessionId, limit, cursor } = result.data;
-
-    try {
         const chats = await getChats(sessionId, limit, cursor);
         return NextResponse.json(chats);
-    } catch (error) {
-        console.error("Chats API Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    });
 }

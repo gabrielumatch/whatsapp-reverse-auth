@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getMessages } from "@/lib/data/get-messages";
 import { mapMessageToDto } from "@/lib/mappers";
 import { z } from "zod";
+import { apiHandler } from "@/lib/api-handler";
 
 const getQuerySchema = z.object({
     chatId: z.string().uuid(),
@@ -19,16 +20,10 @@ const postBodySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const result = getQuerySchema.safeParse(searchParams);
+    return apiHandler(async () => {
+        const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+        const { chatId, limit, cursor, type, search } = getQuerySchema.parse(searchParams);
 
-    if (!result.success) {
-        return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
-    }
-
-    const { chatId, limit, cursor, type, search } = result.data;
-
-    try {
         const messages = await getMessages(
             chatId, 
             limit, 
@@ -36,22 +31,13 @@ export async function GET(request: NextRequest) {
             { type, search }
         );
         return NextResponse.json(messages);
-    } catch (error) {
-        console.error("Messages GET Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    });
 }
 
 export async function POST(request: NextRequest) {
-    try {
+    return apiHandler(async () => {
         const body = await request.json();
-        const result = postBodySchema.safeParse(body);
-
-        if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
-        }
-
-        const { chat_id, session_id, content } = result.data;
+        const { chat_id, session_id, content } = postBodySchema.parse(body);
 
         // Get Chat to find JID
         const chat = await prisma.chat.findUnique({ where: { id: chat_id } });
@@ -70,9 +56,5 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json({ success: true, message: mapMessageToDto(newMessage) });
-
-    } catch (error) {
-        console.error("Send Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    });
 }

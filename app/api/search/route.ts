@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapChatToDto, mapMessageToDto } from "@/lib/mappers";
 import { z } from "zod";
+import { apiHandler } from "@/lib/api-handler";
 
 const querySchema = z.object({
     sessionId: z.string(),
@@ -9,16 +10,10 @@ const querySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const result = querySchema.safeParse(searchParams);
+    return apiHandler(async () => {
+        const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+        const { sessionId, query } = querySchema.parse(searchParams);
 
-    if (!result.success) {
-        return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
-    }
-
-    const { sessionId, query } = result.data;
-
-    try {
         // Search messages
         const messages = await prisma.message.findMany({
             where: {
@@ -51,8 +46,5 @@ export async function GET(request: NextRequest) {
             messages: messages.map(mapMessageToDto), 
             chats: chats.map(mapChatToDto) 
         });
-    } catch (error) {
-        console.error("Search Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    });
 }
