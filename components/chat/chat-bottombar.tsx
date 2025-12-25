@@ -1,7 +1,6 @@
 import {
   IconMicrophone,
   IconMoodSmile,
-  IconPaperclip,
   IconPlus,
   IconSend,
 } from "@tabler/icons-react";
@@ -9,7 +8,6 @@ import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { loggedInUserData } from "@/components/chat/data";
 import {
   Popover,
   PopoverContent,
@@ -19,14 +17,12 @@ import { toast } from "sonner";
 
 interface ChatBottombarProps {
   sendMessage: (message: string) => void;
-  isMobile: boolean;
 }
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏", "🤝", "⭐"];
 
 export function ChatBottombar({
   sendMessage,
-  isMobile,
 }: ChatBottombarProps) {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);

@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Message } from '@/components/chat/data';
 
 export function useWhatsAppMessages(chatId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!chatId) {
@@ -15,46 +13,21 @@ export function useWhatsAppMessages(chatId: string | null) {
 
     setLoading(true);
 
-    // 1. Fetch initial messages
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('timestamp', { ascending: true });
-      
-      if (data) setMessages(data);
-      setLoading(false);
+        try {
+            const res = await fetch(`/api/messages?chatId=${chatId}`);
+            const data = await res.json();
+            setMessages(data);
+            setLoading(false);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     fetchMessages();
+    const interval = setInterval(fetchMessages, 1000); // Poll every 1s
 
-    // 2. Subscribe to new messages
-    const channel = supabase
-      .channel(`messages:${chatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_messages',
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-             setMessages((prev) => [...prev, payload.new as Message]);
-          } else if (payload.eventType === 'UPDATE') {
-             setMessages((prev) => 
-                prev.map(msg => msg.id === payload.new.id ? payload.new as Message : msg)
-             );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(interval);
   }, [chatId]);
 
   return { messages, loading };

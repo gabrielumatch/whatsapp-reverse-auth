@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,6 @@ function AddWhatsAppAccountContent() {
   const [sessionId, setSessionId] = useState("");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [status, setStatus] = useState("disconnected");
-  const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -25,61 +23,32 @@ function AddWhatsAppAccountContent() {
     }
   }, [searchParams]);
 
-  const fetchInitialData = async () => {
-      if (!sessionId) return;
-      console.log("Fetching data for:", sessionId);
-      const { data, error } = await supabase
-          .from("whatsapp_sessions_metadata")
-          .select("*")
-          .eq("session_id", sessionId)
-          .single();
-      
-      console.log("Fetch result:", data, error);
-
-      if (data) {
-          if (data.qr_code) setQrCode(data.qr_code);
-          if (data.status) setStatus(data.status);
-      }
-  };
-
   useEffect(() => {
     if (!sessionId) return;
 
-    fetchInitialData();
-
-    // 1. Subscribe to changes
-    console.log("Subscribing to session:", sessionId);
-    const channel = supabase
-      .channel("whatsapp_metadata")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "whatsapp_sessions_metadata",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          console.log("Received payload:", payload);
-          const newData = payload.new as any;
-          if (newData) {
-            if (newData.qr_code) setQrCode(newData.qr_code);
-            if (newData.status) setStatus(newData.status);
+    const checkStatus = async () => {
+        try {
+            const res = await fetch(`/api/session?sessionId=${sessionId}`);
+            const data = await res.json();
             
-            if (newData.status === 'connected') {
-                setTimeout(() => router.push('/protected/whatsapp'), 2000);
+            if (data && data.status) {
+                setStatus(data.status);
+                if (data.qrCode) setQrCode(data.qrCode);
+                
+                if (data.status === 'connected') {
+                    setTimeout(() => router.push('/protected/whatsapp'), 2000);
+                }
             }
-          }
+        } catch (e) {
+            console.error(e);
         }
-      )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
     };
-  }, [sessionId, supabase, router]);
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 2000); // Poll every 2s
+
+    return () => clearInterval(interval);
+  }, [sessionId, router]);
 
   const copyCommand = () => {
       const command = `SESSION_ID=${sessionId} npm run bot`;
@@ -125,9 +94,6 @@ function AddWhatsAppAccountContent() {
                <div className="flex gap-2">
                    <Button onClick={copyCommand} variant="outline" size="sm">
                        Copy Command
-                   </Button>
-                   <Button onClick={fetchInitialData} variant="secondary" size="sm">
-                       Check Status
                    </Button>
                </div>
             </div>

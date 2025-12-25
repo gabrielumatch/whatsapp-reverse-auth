@@ -1,12 +1,14 @@
 import { WAMessage, downloadMediaMessage } from "@whiskeysockets/baileys";
 import { BotContext } from "../types";
-import { checkRLSError } from "../utils";
+import fs from "fs";
+import path from "path";
 
 export async function downloadAndUploadMedia(ctx: BotContext, m: WAMessage): Promise<string | null> {
-    const { supabase, sessionId } = ctx;
+    const { sessionId } = ctx;
+    let messageType = "unknown";
 
     try {
-        const messageType = Object.keys(m.message || {})[0];
+        messageType = Object.keys(m.message || {})[0];
         // Only handle specific media types
         if (!['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(messageType)) {
             return null;
@@ -25,31 +27,30 @@ export async function downloadAndUploadMedia(ctx: BotContext, m: WAMessage): Pro
 
         // Generate filename
         const ext = getExtension(messageType);
-        const filename = `${sessionId}/${m.key.id}.${ext}`;
+        const fileName = `${m.key.id}.${ext}`;
+        const relativeDir = path.join(sessionId);
+        const absoluteDir = path.join(process.cwd(), 'storage', 'whatsapp-media', relativeDir);
 
-        // Upload to Supabase
-        const { data, error } = await supabase
-            .storage
-            .from('whatsapp-media')
-            .upload(filename, buffer, {
-                contentType: getMimeType(messageType),
-                upsert: true
-            });
-
-        if (error) {
-            console.error("Failed to upload media:", error);
-            checkRLSError(error);
-            return null;
+        // Ensure directory exists
+        if (!fs.existsSync(absoluteDir)) {
+            fs.mkdirSync(absoluteDir, { recursive: true });
         }
 
-        return data.path; // Return the storage path (e.g. "session_id/msg_id.jpg")
+        const absolutePath = path.join(absoluteDir, fileName);
+        const relativePath = path.join(relativeDir, fileName).replace(/\\/g, '/');
 
-    } catch (err: any) {
-        if (err?.output?.statusCode === 403 || err?.output?.statusCode === 404 || err?.output?.statusCode === 410) {
-            console.log(`Media unavailable (${messageType}):`, err.output.statusCode);
+        // Write to filesystem
+        fs.writeFileSync(absolutePath, buffer);
+
+        return relativePath;
+
+    } catch (err: unknown) {
+        const error = err as { output?: { statusCode?: number }; message?: string };
+        if (error.output?.statusCode === 403 || error.output?.statusCode === 404 || error.output?.statusCode === 410) {
+            console.log(`Media unavailable (${messageType}):`, error.output.statusCode);
             return null;
         }
-        console.error("Error handling media:", err.message || err);
+        console.error("Error handling media:", error.message || error);
         return null;
     }
 }
@@ -59,7 +60,7 @@ function getExtension(type: string): string {
         case 'imageMessage': return 'jpg';
         case 'videoMessage': return 'mp4';
         case 'audioMessage': return 'mp3';
-        case 'documentMessage': return 'pdf'; // approximation, better to check mimetype
+        case 'documentMessage': return 'pdf';
         default: return 'bin';
     }
 }

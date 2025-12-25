@@ -10,12 +10,40 @@ export interface Chat {
 }
   
 export interface Message {
+  
     id: string;
+  
     chat_id: string;
+  
     sender_jid: string;
-    content: string;
-    message_type: string;
+  
+    content: string | null;
+  
+    caption: string | null;
+  
+    media_url: string | null;
+  
+    message_type: string | null;
+  
     timestamp: string;
+  
     status: string;
+  
     is_from_me: boolean;
+  
 }
+  
+
+  
+
+  
+export const loggedInUserData = {
+  
+    id: "me",
+  
+    avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Admin",
+  
+    name: "Admin",
+  
+};
+  

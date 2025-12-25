@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Chat, Message, loggedInUserData } from "@/components/chat/data";
+import { Chat, Message } from "@/components/chat/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ChatBottombar } from "@/components/chat/chat-bottombar";
@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
+import { TextMessage, ImageMessage, VideoMessage, AudioMessage, DocumentMessage } from "./message-types";
 
 interface ChatDisplayProps {
   selectedChat: Chat;
@@ -37,6 +38,31 @@ export function ChatDisplay({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  const renderMessageContent = (message: Message) => {
+    // Media URL construction
+    const mediaSrc = message.media_url ? `/api/media/whatsapp-media/${message.media_url}` : undefined;
+
+    if (!mediaSrc && message.message_type !== 'conversation' && message.message_type !== 'extendedTextMessage') {
+        // Fallback for missing media
+        return <TextMessage content={`[${message.message_type}]`} />;
+    }
+
+    switch (message.message_type) {
+        case 'imageMessage':
+            return <ImageMessage url={mediaSrc!} caption={message.content} />;
+        case 'videoMessage':
+            return <VideoMessage url={mediaSrc!} caption={message.content} />;
+        case 'audioMessage':
+            return <AudioMessage url={mediaSrc!} />;
+        case 'documentMessage':
+            return <DocumentMessage url={mediaSrc!} caption={message.content} />;
+        case 'stickerMessage':
+             return <ImageMessage url={mediaSrc!} className="w-32 bg-transparent" />;
+        default:
+            return <TextMessage content={message.content} />;
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -95,7 +121,7 @@ export function ChatDisplay({
                   : "bg-primary text-primary-foreground self-end rounded-tr-none"
               )}
             >
-              <div>{message.content}</div>
+              {renderMessageContent(message)}
               <div
                 className={cn(
                   "text-[10px] flex items-center justify-end gap-1",
@@ -132,7 +158,7 @@ export function ChatDisplay({
         </AnimatePresence>
         <div ref={messagesEndRef} />
       </div>
-      <ChatBottombar sendMessage={sendMessage} isMobile={isMobile} />
+      <ChatBottombar sendMessage={sendMessage} />
     </div>
   );
 }

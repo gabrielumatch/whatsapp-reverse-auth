@@ -3,13 +3,12 @@ import { BotContext } from "../types";
 import { getOrCreateChat } from "./chat-handler";
 import { syncContact } from "./contact-handler";
 import { downloadAndUploadMedia } from "./media-handler";
-import { checkRLSError } from "../utils";
 
 /**
  * Main processor for incoming and synced messages.
  */
 export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
-    const { supabase, sessionId, sock } = ctx;
+    const { sessionId, sock } = ctx;
 
     if (!m.message) return;
 
@@ -25,7 +24,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     
     // Improved Text Extraction
     let text = "";
-    let caption = null;
+    let caption: string | null = null;
 
     if (msgType === 'conversation') {
         text = m.message.conversation || "";
@@ -57,20 +56,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     const chatId = await getOrCreateChat(ctx, remoteJid, contactName, text);
     if (!chatId) return;
 
-    // 2. Check for Duplicate Message (especially important for syncs)
-    const { data: existing, error: dupError } = await supabase
-        .from("whatsapp_messages")
-        .select("id")
-        .eq("session_id", sessionId)
-        .eq("message_id", messageId)
-        .single();
-    
-    if (dupError && dupError.code !== 'PGRST116') {
-        checkRLSError(dupError);
-    }
-    if (existing) return;
-
-    // 3. Handle Media Downloads in background
+    // 2. Handle Media Downloads in background
     let mediaPath: string | null = null;
     if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(msgType)) {
         try {
@@ -80,30 +66,24 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         }
     }
 
-    // 4. Save to Database
+    // 3. Enqueue Message for Batch Insert
     const timestamp = getMessageTimestamp(m.messageTimestamp);
     
-    const { error: msgError } = await supabase
-        .from("whatsapp_messages")
-        .insert({
-            chat_id: chatId,
-            session_id: sessionId,
-            message_id: messageId,
-            sender_jid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
-            content: text,
-            caption: caption,
-            media_url: mediaPath,
-            message_type: msgType,
-            timestamp: timestamp.toISOString(),
-            is_from_me: isFromMe,
-            status: "delivered", 
-        });
+    await ctx.messageProcessor.enqueue({
+        chatId,
+        sessionId,
+        messageId,
+        senderJid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
+        content: text,
+        caption: caption,
+        mediaUrl: mediaPath,
+        messageType: msgType,
+        timestamp: timestamp,
+        isFromMe: isFromMe,
+        status: "delivered", 
+    });
 
-    if (msgError) {
-        checkRLSError(msgError);
-    }
-
-    // 5. Background: Sync Contact Info
+    // 4. Background: Sync Contact Info
     if (!isFromMe) {
         syncContact(ctx, remoteJid, contactName).catch(() => {});
     }
@@ -112,7 +92,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 /**
  * Safely converts Baileys timestamp (number or Long) to JS Date.
  */
-function getMessageTimestamp(ts: number | any | null | undefined): Date {
+function getMessageTimestamp(ts: number | { toNumber?: () => number; low?: number } | null | undefined): Date {
     if (!ts) return new Date();
     
     if (typeof ts === 'number') {

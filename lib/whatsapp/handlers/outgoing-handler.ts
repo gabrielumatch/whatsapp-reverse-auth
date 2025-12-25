@@ -1,67 +1,47 @@
-import { BotContext, WebMessage } from "../types";
-import { checkRLSError } from "../utils";
+import { BotContext } from "../types";
 
 export function setupOutgoingMessageListener(ctx: BotContext) {
-    const { supabase, sessionId, sock } = ctx;
+    const { sessionId, sock, messageRepo } = ctx;
 
-    console.log("Subscribing to outgoing messages for session:", sessionId);
+    console.log("Starting outgoing message polling for session:", sessionId);
 
-    return supabase
-        .channel(`bot-sending-${sessionId}`)
-        .on(
-            "postgres_changes",
-            {
-                event: "INSERT",
-                schema: "public",
-                table: "whatsapp_messages",
-                filter: `session_id=eq.${sessionId}`,
-            },
-            async (payload) => {
-                const newMsg = payload.new as WebMessage;
+    let processing = false;
 
-                // We only care about messages marked 'sent' (pending) and from 'me'
-                if (newMsg.is_from_me && newMsg.status === 'sent') {
-                    console.log("Processing outgoing message:", newMsg.id);
+    setInterval(async () => {
+        if (processing) return;
+        processing = true;
 
-                    // 1. Get Chat JID
-                    const { data: chat, error: loadError } = await supabase
-                        .from("whatsapp_chats")
-                        .select("jid")
-                        .eq("id", newMsg.chat_id)
-                        .single();
-                    
-                    if (loadError) checkRLSError(loadError);
+        try {
+            // Fetch pending messages
+            const messages = await messageRepo.findPendingOutgoing(sessionId);
 
-                    if (chat && chat.jid) {
-                        try {
-                            // 2. Send via WhatsApp
-                            const sentMsg = await sock.sendMessage(chat.jid, { text: newMsg.content });
-                            console.log("Message sent to WhatsApp:", chat.jid, sentMsg?.key.id);
+            for (const msg of messages) {
+                console.log("Processing outgoing message:", msg.id);
 
-                            // 3. Update status and message_id
-                            if (sentMsg?.key.id) {
-                                const { error: updateError } = await supabase
-                                    .from("whatsapp_messages")
-                                    .update({
-                                        status: "delivered",
-                                        message_id: sentMsg.key.id
-                                    })
-                                    .eq("id", newMsg.id);
-                                
-                                if (updateError) checkRLSError(updateError);
-                            }
+                if (msg.chat && msg.chat.jid) {
+                    try {
+                        // Send via WhatsApp
+                        const text = msg.content || "";
+                        
+                        const sentMsg = await sock.sendMessage(msg.chat.jid, { text });
+                        console.log("Message sent to WhatsApp:", msg.chat.jid, sentMsg?.key.id);
 
-                        } catch (err) {
-                            console.error("Failed to send message:", err);
-                            // Optional: Update status to 'failed'
-                        }
-                    } else {
-                        console.error("Chat not found for outgoing message:", newMsg.chat_id);
+                        // Update status
+                        await messageRepo.updateStatus(msg.id, "delivered", sentMsg?.key.id || undefined);
+
+                    } catch (err) {
+                        console.error("Failed to send message:", err);
+                        await messageRepo.updateStatus(msg.id, "failed");
                     }
+                } else {
+                    console.error("Chat not found for outgoing message:", msg.chatId);
                 }
             }
-        )
-        .subscribe((status) => {
-            console.log("Outgoing listener status:", status);
-        });
+
+        } catch (err) {
+            console.error("Error in outgoing polling:", err);
+        } finally {
+            processing = false;
+        }
+    }, 1000); // Poll every second
 }

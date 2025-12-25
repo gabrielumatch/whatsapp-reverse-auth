@@ -33,10 +33,10 @@ export default function WhatsAppAccountsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sessions.map((account) => (
-          <Card key={account.session_id}>
+          <Card key={account.id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {account.session_id}
+                {account.id}
               </CardTitle>
               {account.status === "connected" ? (
                 <Badge className="bg-green-500 hover:bg-green-600">
@@ -50,10 +50,10 @@ export default function WhatsAppAccountsPage() {
             </CardHeader>
             <CardHeader className="pt-2">
               <CardTitle className="text-xl font-bold truncate">
-                {account.phone_number ? `+${account.phone_number}` : "No Number"}
+                {account.phoneNumber ? `+${account.phoneNumber}` : "No Number"}
               </CardTitle>
-              <CardDescription className="text-xs truncate" title={account.session_id}>
-                ID: {account.session_id}
+              <CardDescription className="text-xs truncate" title={account.id}>
+                ID: {account.id}
               </CardDescription>
             </CardHeader>
             <CardFooter>
@@ -62,7 +62,7 @@ export default function WhatsAppAccountsPage() {
                 className="w-full"
                 onClick={() => {
                     if (confirm("Are you sure you want to remove this session?")) {
-                        removeSession(account.session_id);
+                        removeSession(account.id);
                     }
                 }}
               >
@@ -73,7 +73,7 @@ export default function WhatsAppAccountsPage() {
         ))}
         {sessions.length === 0 && (
             <div className="col-span-full text-center p-8 text-muted-foreground">
-                No accounts connected. Click "Add Account" to start.
+                No accounts connected. Click &quot;Add Account&quot; to start.
             </div>
         )}
       </div>

@@ -1,79 +1,54 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Chat } from '@/components/chat/data';
 
 export function useWhatsAppChats() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
+  // 1. Get Session
   useEffect(() => {
-    // 1. Get the first connected session
+    // Ideally we list sessions. For now, fetch the first active one.
+    // Or we rely on the user passing it? The UI currently auto-selects.
+    // Let's fetch all sessions and pick one.
     const fetchSession = async () => {
-      const { data } = await supabase
-        .from('whatsapp_sessions_metadata')
-        .select('session_id')
-        .eq('status', 'connected')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (data) {
-        setSessionId(data.session_id);
-      } else {
-        setLoading(false);
-      }
+        try {
+            const res = await fetch('/api/sessions');
+            const data = await res.json();
+            if (data && data.length > 0) {
+                // Prefer connected
+                const active = data.find((s: any) => s.status === 'connected') || data[0];
+                setSessionId(active.id);
+            } else {
+                setLoading(false);
+            }
+        } catch (e) {
+            console.error(e);
+            setLoading(false);
+        }
     };
-
     fetchSession();
   }, []);
 
+  // 2. Fetch Chats (Poll)
   useEffect(() => {
     if (!sessionId) return;
 
-    // 2. Fetch initial chats
     const fetchChats = async () => {
-      const { data } = await supabase
-        .from('whatsapp_chats')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('last_message_at', { ascending: false });
-      
-      if (data) setChats(data);
-      setLoading(false);
+      try {
+        const res = await fetch(`/api/chats?sessionId=${sessionId}`);
+        const data = await res.json();
+        setChats(data);
+        setLoading(false);
+      } catch (e) {
+        console.error(e);
+      }
     };
 
     fetchChats();
+    const interval = setInterval(fetchChats, 3000); // Poll every 3s
 
-    // 3. Subscribe to chat updates
-    const channel = supabase
-      .channel(`chats:${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_chats',
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setChats((prev) => [payload.new as Chat, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setChats((prev) =>
-              prev.map((chat) =>
-                chat.id === payload.new.id ? (payload.new as Chat) : chat
-              ).sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime())
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(interval);
   }, [sessionId]);
 
   return { chats, sessionId, loading };

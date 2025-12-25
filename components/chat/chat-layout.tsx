@@ -7,15 +7,13 @@ import { ChatDisplay } from "@/components/chat/chat-display";
 import { Chat } from "@/components/chat/data";
 import { useWhatsAppChats } from "@/hooks/use-whatsapp-chats";
 import { useWhatsAppMessages } from "@/hooks/use-whatsapp-messages";
-import { createClient } from "@/lib/supabase/client";
 
 export function ChatLayout() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const supabase = createClient();
 
-  const { chats, sessionId, loading: chatsLoading } = useWhatsAppChats();
-  const { messages, loading: messagesLoading } = useWhatsAppMessages(selectedChat?.id || null);
+  const { chats, sessionId } = useWhatsAppChats();
+  const { messages } = useWhatsAppMessages(selectedChat?.id || null);
 
   useEffect(() => {
     const checkScreenWidth = () => {
@@ -47,22 +45,24 @@ export function ChatLayout() {
     const payload = {
         chat_id: selectedChat.id,
         session_id: sessionId,
-        sender_jid: "me", // Placeholder
         content: messageContent,
-        is_from_me: true,
-        status: "sent",
-        timestamp: new Date().toISOString()
     };
 
     console.log("Sending payload:", payload);
 
-    const { error } = await supabase.from("whatsapp_messages").insert(payload);
-
-    if (error) {
+    try {
+        const res = await fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            console.error("Failed to send message:", err);
+        }
+    } catch (error) {
         console.error("Failed to send message:", error);
-        console.error("Error code:", error.code);
-        console.error("Error message:", error.message);
-        console.error("Error details:", error.details);
     }
   };
 

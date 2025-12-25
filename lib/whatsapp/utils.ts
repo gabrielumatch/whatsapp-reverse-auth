@@ -1,4 +1,4 @@
-export function checkRLSError(error: any) {
+export function checkRLSError(error: { code?: string; message?: string } | null | undefined) {
     if (!error) return;
     
     // Postgres Error 42501: insufficient_privilege (RLS violation)
