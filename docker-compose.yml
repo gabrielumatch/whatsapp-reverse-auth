@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  whatsapp-reverse-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatsapp-reverse-auth
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - BOT_PHONE_NUMBER=${BOT_PHONE_NUMBER:-}
+      - NODE_ENV=production
+    volumes:
+      - whatsapp-auth:/app/auth_info_baileys
+    mem_limit: 512m
+    cpus: 1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  whatsapp-auth:
+    driver: local
