@@ -30,12 +30,12 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
     const fetchMedia = async () => {
       const res = await fetch(`/api/messages?chatId=${chat.id}&type=imageMessage&limit=20`);
       const data = await res.json();
-      setMedia(data);
+      setMedia(data.reverse());
     };
     const fetchDocs = async () => {
       const res = await fetch(`/api/messages?chatId=${chat.id}&type=documentMessage&limit=20`);
       const data = await res.json();
-      setDocs(data);
+      setDocs(data.reverse());
     };
     fetchMedia();
     fetchDocs();
@@ -51,7 +51,7 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
           setLoading(true);
           const res = await fetch(`/api/messages?chatId=${chat.id}&search=${encodeURIComponent(search)}&limit=20`);
           const data = await res.json();
-          setSearchResults(data);
+          setSearchResults(data.reverse());
           setLoading(false);
       }, 500);
 
