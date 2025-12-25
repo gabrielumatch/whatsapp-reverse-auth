@@ -112,11 +112,38 @@ export async function startWhatsAppBot(
             }
         }
         
+        // Handle History Sync (Initial Messages & Contacts)
         if (events["messaging-history.set"]) {
-            const { messages } = events["messaging-history.set"];
-            console.log(`Received History Sync: ${messages.length} messages.`);
+            const { messages, contacts } = events["messaging-history.set"];
+            console.log(`Received History Sync: ${messages.length} messages, ${contacts.length} contacts.`);
+            
+            // Sync Contacts (Names)
+            for (const contact of contacts) {
+                // contact: { id: string, name?: string, notify?: string }
+                // 'name' is usually the address book name, 'notify' is the pushname.
+                const name = contact.name || contact.notify;
+                if (name) {
+                    // Update Chat Name
+                    await ctx.chatRepo.upsertChat(sessionId, contact.id, { name });
+                    // Update Contact Record
+                    await ctx.contactRepo.upsertContact(sessionId, contact.id, { name });
+                }
+            }
+
             for (const msg of messages) {
                 await handleIncomingMessage(ctx, msg);
+            }
+        }
+
+        // Handle Contact Updates (Live)
+        if (events["contacts.upsert"]) {
+            const contacts = events["contacts.upsert"];
+            for (const contact of contacts) {
+                const name = contact.name || contact.notify;
+                if (name) {
+                    await ctx.chatRepo.upsertChat(sessionId, contact.id, { name });
+                    await ctx.contactRepo.upsertContact(sessionId, contact.id, { name });
+                }
             }
         }
     });

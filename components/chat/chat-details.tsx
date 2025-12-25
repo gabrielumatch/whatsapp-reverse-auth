@@ -91,7 +91,8 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
           <div className="h-full p-4 overflow-y-auto">
             <div className="grid grid-cols-3 gap-2">
               {media.map((m) => {
-                const url = m.media_url ? `/api/media/whatsapp-media/${m.media_url}` : '';
+                const url = m.media_url ? `/api/media/whatsapp-media/${m.media_url}` : undefined;
+                if (!url) return null; // Skip if no URL
                 return (
                     <div key={m.id} className="aspect-square relative cursor-pointer hover:opacity-80" onClick={() => setLightboxSrc(url)}>
                     <img 
