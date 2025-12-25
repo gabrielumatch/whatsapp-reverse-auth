@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Chat, Message } from "@/components/chat/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+    Tabs, 
+    TabsContent, 
+    TabsList, 
+    TabsTrigger 
+} from "@/components/ui/tabs";
 import { DocumentMessage } from "./message-types";
 import { Input } from "@/components/ui/input";
 import { IconSearch } from "@tabler/icons-react";
+import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Lightbox } from "@/components/ui/lightbox";
 
 interface ChatDetailsProps {
   chat: Chat;
@@ -16,6 +23,7 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   // Fetch Media
   useEffect(() => {
@@ -52,15 +60,23 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Header Profile */}
-      <div className="flex flex-col items-center p-6 border-b shrink-0">
-        <Avatar className="w-24 h-24 mb-4">
+      <SheetHeader className="p-6 border-b shrink-0 flex flex-col items-center gap-4">
+        <Avatar 
+            className="w-24 h-24 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => chat.avatar_url && setLightboxSrc(chat.avatar_url)}
+        >
           <AvatarImage src={chat.avatar_url || undefined} />
           <AvatarFallback>{chat.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
-        <h2 className="text-xl font-bold text-center truncate w-full px-4">{chat.name}</h2>
-        <p className="text-sm text-muted-foreground truncate w-full text-center px-4">{chat.jid}</p>
-      </div>
+        <div className="flex flex-col items-center">
+            <SheetTitle className="text-xl font-bold text-center truncate w-full">
+                {chat.name}
+            </SheetTitle>
+            <SheetDescription className="text-sm text-muted-foreground truncate w-full text-center">
+                {chat.jid}
+            </SheetDescription>
+        </div>
+      </SheetHeader>
 
       <Tabs defaultValue="media" className="flex-1 flex flex-col min-h-0">
         <div className="px-4 py-2 border-b shrink-0">
@@ -74,15 +90,18 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
         <TabsContent value="media" className="flex-1 min-h-0 p-0 overflow-hidden">
           <div className="h-full p-4 overflow-y-auto">
             <div className="grid grid-cols-3 gap-2">
-              {media.map((m) => (
-                <div key={m.id} className="aspect-square relative cursor-pointer hover:opacity-80">
-                   <img 
-                     src={m.media_url ? `/api/media/whatsapp-media/${m.media_url}` : ''} 
-                     className="object-cover w-full h-full rounded-md"
-                     alt="media"
-                   />
-                </div>
-              ))}
+              {media.map((m) => {
+                const url = m.media_url ? `/api/media/whatsapp-media/${m.media_url}` : '';
+                return (
+                    <div key={m.id} className="aspect-square relative cursor-pointer hover:opacity-80" onClick={() => setLightboxSrc(url)}>
+                    <img 
+                        src={url} 
+                        className="object-cover w-full h-full rounded-md"
+                        alt="media"
+                    />
+                    </div>
+                );
+              })}
               {media.length === 0 && <div className="col-span-full text-center text-muted-foreground p-4">No media</div>}
             </div>
           </div>
@@ -133,6 +152,7 @@ export function ChatDetails({ chat }: ChatDetailsProps) {
             </div>
         </TabsContent>
       </Tabs>
+      <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </div>
   );
 }

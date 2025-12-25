@@ -7,14 +7,16 @@ import {
   IconDotsVertical,
   IconPhone,
   IconVideo,
-  IconInfoCircle
+  IconInfoCircle,
+  IconChecks,
+  IconCheck
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { TextMessage, ImageMessage, VideoMessage, AudioMessage, DocumentMessage } from "./message-types";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ChatDetails } from "./chat-details";
-import { IconChecks, IconCheck } from "@tabler/icons-react";
+import { Lightbox } from "@/components/ui/lightbox";
 
 interface ChatDisplayProps {
   selectedChat: Chat;
@@ -37,6 +39,7 @@ export function ChatDisplay({
 }: ChatDisplayProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,7 +84,7 @@ export function ChatDisplay({
 
     switch (message.message_type) {
         case 'imageMessage':
-            return <ImageMessage url={mediaSrc!} caption={message.content} />;
+            return <ImageMessage url={mediaSrc!} caption={message.content} onClick={() => setLightboxSrc(mediaSrc!)} />;
         case 'videoMessage':
             return <VideoMessage url={mediaSrc!} caption={message.content} />;
         case 'audioMessage':
@@ -89,7 +92,7 @@ export function ChatDisplay({
         case 'documentMessage':
             return <DocumentMessage url={mediaSrc!} caption={message.content} />;
         case 'stickerMessage':
-             return <ImageMessage url={mediaSrc!} className="w-32 bg-transparent" />;
+             return <ImageMessage url={mediaSrc!} className="w-32 bg-transparent" onClick={() => setLightboxSrc(mediaSrc!)} />;
         default:
             return <TextMessage content={message.content} />;
     }
@@ -210,6 +213,7 @@ export function ChatDisplay({
         <div ref={messagesEndRef} />
       </div>
       <ChatBottombar sendMessage={sendMessage} />
+      <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
     </div>
   );
 }

@@ -7,15 +7,19 @@ interface MediaProps {
   url: string;
   caption?: string | null;
   className?: string;
+  onClick?: () => void;
 }
 
 export const TextMessage = ({ content }: { content: string | null }) => (
   <div className="whitespace-pre-wrap break-words">{content || ""}</div>
 );
 
-export const ImageMessage = ({ url, caption, className }: MediaProps) => (
+export const ImageMessage = ({ url, caption, className, onClick }: MediaProps) => (
   <div className={cn("flex flex-col gap-1", className)}>
-    <div className="relative aspect-video w-full max-w-sm rounded-md overflow-hidden bg-muted">
+    <div 
+        className={cn("relative aspect-video w-full max-w-sm rounded-md overflow-hidden bg-muted", onClick && "cursor-pointer hover:opacity-90")}
+        onClick={onClick}
+    >
       <Image 
         src={url} 
         alt={caption || "Image"} 
