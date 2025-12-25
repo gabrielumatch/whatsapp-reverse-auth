@@ -41,6 +41,33 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_sessions_metadata: {
+        Row: {
+          created_at: string | null
+          phone_number: string | null
+          qr_code: string | null
+          session_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          phone_number?: string | null
+          qr_code?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

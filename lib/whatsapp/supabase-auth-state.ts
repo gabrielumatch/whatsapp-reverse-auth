@@ -85,9 +85,10 @@ export async function useSupabaseAuthState(
                 },
                 set: async (data) => {
                     const tasks: Promise<void>[] = [];
-                    for (const type in data) {
+                    for (const category in data) {
+                        const type = category as keyof SignalDataTypeMap;
                         for (const id in data[type]) {
-                            const value = data[type][id];
+                            const value = data[type]?.[id];
                             if (value) {
                                 tasks.push(writeData(value, type, id));
                             } else {

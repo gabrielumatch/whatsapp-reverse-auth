@@ -122,8 +122,8 @@ export interface Message {
   avatar: string;
   name: string;
   message: string;
-  timestamp?: string;
-  status?: "sent" | "delivered" | "read";
+  timestamp: string;
+  status: string;
 }
 
 export interface User {

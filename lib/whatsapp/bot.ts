@@ -27,28 +27,53 @@ export async function startWhatsAppBot(supabase: SupabaseClient<Database>, sessi
             keys: makeCacheableSignalKeyStore(state.keys, logger),
         },
         printQRInTerminal: true, // For initial pairing
-        generateHighQualityLink: true,
     });
 
     sock.ev.on("creds.update", saveCreds);
 
-    sock.ev.on("connection.update", (update) => {
+    sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log("New QR Code generated. Please scan it.");
-            // In a real app, we might emit this via a socket or save to DB for the dashboard
+            console.log("New QR Code generated. Saving to DB...");
+            const { error } = await supabase.from("whatsapp_sessions_metadata").upsert({
+                session_id: sessionId,
+                qr_code: qr,
+                status: "connecting",
+                updated_at: new Date().toISOString()
+            });
+            
+            if (error) {
+                console.error("Failed to save QR code:", error);
+            } else {
+                console.log("QR code saved successfully.");
+            }
         }
 
         if (connection === "close") {
             const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log("Connection closed due to ", lastDisconnect?.error, ", reconnecting ", shouldReconnect);
+            
+            await supabase.from("whatsapp_sessions_metadata").upsert({
+                session_id: sessionId,
+                status: "disconnected",
+                updated_at: new Date().toISOString()
+            });
+
             // reconnect if not logged out
             if (shouldReconnect) {
                 startWhatsAppBot(supabase, sessionId);
             }
         } else if (connection === "open") {
             console.log("Opened connection");
+            const user = sock.user;
+            await supabase.from("whatsapp_sessions_metadata").upsert({
+                session_id: sessionId,
+                status: "connected",
+                phone_number: user?.id.split(":")[0], // Extract phone from JID
+                qr_code: null, // Clear QR code
+                updated_at: new Date().toISOString()
+            });
         }
     });
 

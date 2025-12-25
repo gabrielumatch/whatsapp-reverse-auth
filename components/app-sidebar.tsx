@@ -38,6 +38,11 @@ const data = {
       icon: IconMessage2,
     },
     {
+      title: "WhatsApp Accounts",
+      url: "/protected/whatsapp",
+      icon: IconUsers,
+    },
+    {
       title: "Contacts",
       url: "#",
       icon: IconUsers,
