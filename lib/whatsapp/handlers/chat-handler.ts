@@ -4,13 +4,15 @@ export async function getOrCreateChat(
     ctx: BotContext,
     jid: string,
     pushName?: string | null,
-    lastMessageText: string = ""
+    lastMessageText: string = "",
+    timestamp?: Date
 ): Promise<string | null> {
     const { sessionId, chatRepo } = ctx;
     
     const chat = await chatRepo.upsertChat(sessionId, jid, {
         name: pushName || undefined,
-        lastMessageContent: lastMessageText
+        lastMessageContent: lastMessageText,
+        timestamp
     });
 
     return chat.id;

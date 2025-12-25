@@ -51,12 +51,13 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     // Determine Display Name logic
     const contactName = !isFromMe ? m.pushName : null;
+    const timestamp = getMessageTimestamp(m.messageTimestamp);
 
     // 1. Get or Create Chat Record
-    const chatId = await getOrCreateChat(ctx, remoteJid, contactName, text);
+    const chatId = await getOrCreateChat(ctx, remoteJid, contactName, text, timestamp);
     if (!chatId) return;
 
-    // 2. Handle Media Downloads in background
+    // 2. Check for Duplicate Message
     let mediaPath: string | null = null;
     if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(msgType)) {
         try {
@@ -66,10 +67,9 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         }
     }
 
-    // 3. Enqueue Message for Batch Insert
-    const timestamp = getMessageTimestamp(m.messageTimestamp);
-    
-    await ctx.messageProcessor.enqueue({
+    // 4. Save to Database
+    try {
+        await ctx.messageRepo.create({
         chatId,
         sessionId,
         messageId,

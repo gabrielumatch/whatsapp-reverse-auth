@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import { Chat } from "@/components/chat/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useRef } from "react";
@@ -57,13 +57,13 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
               </div>
               <div
                 className={cn(
-                  "ml-auto text-xs",
+                  "ml-auto text-xs whitespace-nowrap",
                   selectedChat?.id === item.id
                     ? "text-foreground"
                     : "text-muted-foreground"
                 )}
               >
-                 {item.last_message_at ? new Date(item.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                 {item.last_message_at ? formatRelativeTime(item.last_message_at) : ''}
               </div>
             </div>
             <div className="line-clamp-2 text-xs text-muted-foreground">
