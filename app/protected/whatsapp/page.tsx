@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -6,21 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconLoader } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-
-// Mock data
-const accounts = [
-  {
-    id: "primary_bot",
-    name: "Primary Bot",
-    status: "connected",
-    phone: "+1234567890",
-  },
-];
+import { useSessions } from "@/hooks/use-sessions";
 
 export default function WhatsAppAccountsPage() {
+  const { sessions, loading, removeSession } = useSessions();
+
+  if (loading) {
+      return <div className="p-8 flex justify-center"><IconLoader className="animate-spin" /></div>;
+  }
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
@@ -33,33 +32,50 @@ export default function WhatsAppAccountsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {accounts.map((account) => (
-          <Card key={account.id}>
+        {sessions.map((account) => (
+          <Card key={account.session_id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {account.name}
+                {account.session_id}
               </CardTitle>
               {account.status === "connected" ? (
                 <Badge className="bg-green-500 hover:bg-green-600">
                   Connected
                 </Badge>
               ) : (
-                <Badge variant="destructive">Disconnected</Badge>
+                <Badge variant={account.status === "connecting" ? "secondary" : "destructive"}>
+                  {account.status}
+                </Badge>
               )}
             </CardHeader>
             <CardHeader className="pt-2">
-              <CardTitle className="text-2xl font-bold">
-                {account.phone}
+              <CardTitle className="text-xl font-bold truncate">
+                {account.phone_number ? `+${account.phone_number}` : "No Number"}
               </CardTitle>
-              <CardDescription>Session ID: {account.id}</CardDescription>
+              <CardDescription className="text-xs truncate" title={account.session_id}>
+                ID: {account.session_id}
+              </CardDescription>
             </CardHeader>
             <CardFooter>
-              <Button variant="destructive" className="w-full">
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={() => {
+                    if (confirm("Are you sure you want to remove this session?")) {
+                        removeSession(account.session_id);
+                    }
+                }}
+              >
                 <IconTrash className="mr-2 h-4 w-4" /> Remove
               </Button>
             </CardFooter>
           </Card>
         ))}
+        {sessions.length === 0 && (
+            <div className="col-span-full text-center p-8 text-muted-foreground">
+                No accounts connected. Click "Add Account" to start.
+            </div>
+        )}
       </div>
     </div>
   );

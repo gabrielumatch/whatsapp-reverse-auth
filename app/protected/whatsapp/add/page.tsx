@@ -1,25 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IconLoader } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AddWhatsAppAccountPage() {
+function AddWhatsAppAccountContent() {
   const [sessionId, setSessionId] = useState("");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [status, setStatus] = useState("disconnected");
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    setSessionId("session_" + Math.random().toString(36).substring(7));
-  }, []);
+    const paramId = searchParams.get("session_id");
+    if (paramId) {
+        setSessionId(paramId);
+    } else {
+        setSessionId("session_" + Math.random().toString(36).substring(7));
+    }
+  }, [searchParams]);
 
   const fetchInitialData = async () => {
+      if (!sessionId) return;
       console.log("Fetching data for:", sessionId);
       const { data, error } = await supabase
           .from("whatsapp_sessions_metadata")
@@ -34,10 +41,6 @@ export default function AddWhatsAppAccountPage() {
           if (data.status) setStatus(data.status);
       }
   };
-
-  useEffect(() => {
-    setSessionId("session_" + Math.random().toString(36).substring(7));
-  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -137,4 +140,12 @@ export default function AddWhatsAppAccountPage() {
       </Card>
     </div>
   );
+}
+
+export default function AddWhatsAppAccountPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center p-10"><IconLoader className="animate-spin" /></div>}>
+            <AddWhatsAppAccountContent />
+        </Suspense>
+    );
 }

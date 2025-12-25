@@ -1,16 +1,21 @@
 "use client";
 
-import { userData } from "@/components/chat/data";
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ChatList } from "@/components/chat/chat-list";
 import { ChatDisplay } from "@/components/chat/chat-display";
-import { Message } from "@/components/chat/data";
+import { Chat } from "@/components/chat/data";
+import { useWhatsAppChats } from "@/hooks/use-whatsapp-chats";
+import { useWhatsAppMessages } from "@/hooks/use-whatsapp-messages";
+import { createClient } from "@/lib/supabase/client";
 
 export function ChatLayout() {
-  const [selectedUser, setSelectedUser] = useState(userData[0]);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const supabase = createClient();
+
+  const { chats, sessionId, loading: chatsLoading } = useWhatsAppChats();
+  const { messages, loading: messagesLoading } = useWhatsAppMessages(selectedChat?.id || null);
 
   useEffect(() => {
     const checkScreenWidth = () => {
@@ -29,50 +34,56 @@ export function ChatLayout() {
     };
   }, []);
 
-  const sendMessage = (newMessage: Message) => {
-    const updatedUser = { ...selectedUser };
-    updatedUser.messages.push(newMessage);
-    setSelectedUser(updatedUser);
+  // Auto-select first chat if available and none selected (optional)
+  useEffect(() => {
+    if (!selectedChat && chats.length > 0 && window.innerWidth > 768) {
+        setSelectedChat(chats[0]);
+    }
+  }, [chats, selectedChat]);
 
-    // Simulate a reply
-    setTimeout(() => {
-        setIsTyping(true);
-        setTimeout(() => {
-            const replyMessage: Message = {
-                id: Date.now() + 1,
-                name: selectedUser.name,
-                avatar: selectedUser.avatar,
-                message: "This is a simulated reply to keep the conversation going! 🤖",
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                status: "read"
-            };
-            const userWithReply = { ...updatedUser }; // Use latest state
-            userWithReply.messages.push(replyMessage);
-            setSelectedUser(userWithReply);
-            setIsTyping(false);
-        }, 2000);
-    }, 1000);
+  const sendMessage = async (messageContent: string) => {
+    if (!selectedChat || !sessionId) return;
+
+    const { error } = await supabase.from("whatsapp_messages").insert({
+        chat_id: selectedChat.id,
+        session_id: sessionId,
+        sender_jid: "me", // Placeholder
+        content: messageContent,
+        is_from_me: true,
+        status: "sent",
+        timestamp: new Date().toISOString()
+    });
+
+    if (error) {
+        console.error("Failed to send message:", error);
+    }
   };
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className={cn("w-80 border-r flex flex-col shrink-0 overflow-y-auto", isMobile && "w-full", isMobile && selectedUser && "hidden")}>
+      <div className={cn("w-80 border-r flex flex-col shrink-0 overflow-y-auto", isMobile && "w-full", isMobile && selectedChat && "hidden")}>
         <div className="flex items-center px-4 py-4 border-b">
             <h1 className="text-xl font-bold">Chats</h1>
         </div>
         <ChatList
-          items={userData}
-          selectedUser={selectedUser}
-          setSelectedUser={setSelectedUser}
+          items={chats}
+          selectedChat={selectedChat}
+          setSelectedChat={setSelectedChat}
         />
       </div>
-      <div className={cn("flex-1 flex flex-col overflow-hidden", isMobile && "hidden", isMobile && selectedUser && "flex")}>
-        <ChatDisplay
-          selectedUser={selectedUser}
-          sendMessage={sendMessage}
-          isMobile={isMobile}
-          isTyping={isTyping}
-        />
+      <div className={cn("flex-1 flex flex-col overflow-hidden", isMobile && "hidden", isMobile && selectedChat && "flex")}>
+        {selectedChat ? (
+            <ChatDisplay
+            selectedChat={selectedChat}
+            messages={messages}
+            sendMessage={sendMessage}
+            isMobile={isMobile}
+            />
+        ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+                Select a chat to start messaging
+            </div>
+        )}
       </div>
     </div>
   );

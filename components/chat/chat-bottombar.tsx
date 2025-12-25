@@ -9,7 +9,7 @@ import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Message, loggedInUserData } from "@/components/chat/data";
+import { loggedInUserData } from "@/components/chat/data";
 import {
   Popover,
   PopoverContent,
@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 
 interface ChatBottombarProps {
-  sendMessage: (newMessage: Message) => void;
+  sendMessage: (message: string) => void;
   isMobile: boolean;
 }
 
@@ -39,15 +39,7 @@ export function ChatBottombar({
 
   const handleSend = () => {
     if (message.trim()) {
-      const newMessage: Message = {
-        id: Date.now(),
-        name: loggedInUserData.name,
-        avatar: loggedInUserData.avatar,
-        message: message.trim(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: "sent",
-      };
-      sendMessage(newMessage);
+      sendMessage(message.trim());
       setMessage("");
 
       if (inputRef.current) {
