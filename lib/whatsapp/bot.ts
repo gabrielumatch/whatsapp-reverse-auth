@@ -35,10 +35,12 @@ export async function startWhatsAppBot(
     messageProcessor.start();
 
     // 1. Ensure Session Exists
-    const { error: initError } = (await sessionRepo.initialize(sessionId)) as any;
-    // Note: Prisma returns the data, but if it failed it would throw.
-    // Our repo doesn't return error object like Supabase.
-    console.log("Session record initialized in DB:", sessionId);
+    try {
+        await sessionRepo.initialize(sessionId);
+        console.log("Session record initialized in DB:", sessionId);
+    } catch (error: unknown) {
+        console.error("Failed to initialize session record:", error);
+    }
 
     const { state, saveCreds } = await getRedisAuthState(redis, sessionId);
     const { version, isLatest } = await fetchLatestBaileysVersion();

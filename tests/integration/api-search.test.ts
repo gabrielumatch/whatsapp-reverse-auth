@@ -9,7 +9,7 @@ describe('API: Search', () => {
         prisma = new PrismaClient();
         
         // Setup mock data
-        const session = await prisma.session.create({ data: { id: TEST_SESSION, status: 'test' } });
+        await prisma.session.create({ data: { id: TEST_SESSION, status: 'test' } });
         const chat = await prisma.chat.create({ data: { sessionId: TEST_SESSION, jid: 'user1@s.whatsapp.net', name: 'Alice Wonderland' } });
         
         await prisma.message.createMany({

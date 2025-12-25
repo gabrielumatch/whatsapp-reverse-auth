@@ -15,6 +15,9 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = bottomRef.current;
+    if (!el) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore) {
@@ -24,14 +27,10 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
       { threshold: 0.5 }
     );
 
-    if (bottomRef.current) {
-      observer.observe(bottomRef.current);
-    }
+    observer.observe(el);
 
     return () => {
-      if (bottomRef.current) {
-        observer.unobserve(bottomRef.current);
-      }
+      observer.unobserve(el);
     };
   }, [hasMore, loadMore]);
 

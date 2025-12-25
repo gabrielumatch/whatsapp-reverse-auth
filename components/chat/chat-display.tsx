@@ -1,8 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import { Chat, Message } from "@/components/chat/data";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { ChatBottombar } from "@/components/chat/chat-bottombar";
-import { cn } from "@/lib/utils";
+import {
+  IconPhone,
+  IconVideo,
+  IconInfoCircle,
+} from "@tabler/icons-react";
 import { AnimatePresence } from "framer-motion";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ChatDetails } from "./chat-details";
 import { Lightbox } from "@/components/ui/lightbox";
 import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
@@ -21,7 +29,6 @@ export function ChatDisplay({
   selectedChat,
   messages,
   sendMessage,
-  isMobile,
   isTyping,
   loadMore,
   hasMore
@@ -35,23 +42,22 @@ export function ChatDisplay({
   };
 
   useEffect(() => {
+    const el = topRef.current;
+    if (!el) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore) {
           loadMore();
         }
       },
-      { threshold: 1 }
+      { threshold: 0.1 }
     );
 
-    if (topRef.current) {
-      observer.observe(topRef.current);
-    }
+    observer.observe(el);
 
     return () => {
-      if (topRef.current) {
-        observer.unobserve(topRef.current);
-      }
+      observer.unobserve(el);
     };
   }, [hasMore, loadMore]);
 

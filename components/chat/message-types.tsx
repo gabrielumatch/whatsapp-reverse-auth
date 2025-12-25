@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { IconFile, IconPlayerPlay } from "@tabler/icons-react";
+import { IconFile } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 interface MediaProps {

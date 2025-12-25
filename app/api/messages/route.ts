@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const whereClause: any = { chatId };
+        const whereClause: Prisma.MessageWhereInput = { chatId };
         
         if (type) {
             whereClause.messageType = type;
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json(mapped);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

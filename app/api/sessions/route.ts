@@ -7,7 +7,7 @@ export async function GET() {
             orderBy: { updatedAt: 'desc' }
         });
         return NextResponse.json(sessions);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

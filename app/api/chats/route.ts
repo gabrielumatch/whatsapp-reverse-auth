@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Chat } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -43,20 +44,19 @@ export async function GET(request: NextRequest) {
             LIMIT ${limit}
         `;
 
-        // Map fields to match frontend expectation (snake_case from raw query might need manual mapping if type is lost)
-        const mapped = (chats as any[]).map(c => ({
+        const mapped = (chats as Chat[]).map(c => ({
             id: c.id,
-            session_id: c.session_id,
+            session_id: c.sessionId,
             jid: c.jid,
             name: c.name,
-            avatar_url: c.avatar_url,
-            last_message_at: c.last_message_at,
-            last_message_content: c.last_message_content,
-            unread_count: c.unread_count || 0
+            avatar_url: c.avatarUrl,
+            last_message_at: c.lastMessageAt,
+            last_message_content: c.lastMessageContent,
+            unread_count: c.unreadCount || 0
         }));
 
         return NextResponse.json(mapped);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

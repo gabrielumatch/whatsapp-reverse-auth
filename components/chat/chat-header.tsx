@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ChatDetails } from "./chat-details";
-import { IconDotsVertical, IconPhone, IconVideo, IconInfoCircle } from "@tabler/icons-react";
+import { IconPhone, IconVideo, IconInfoCircle } from "@tabler/icons-react";
 
 interface ChatHeaderProps {
   selectedChat: Chat;

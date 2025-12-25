@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 export class ChatRepository {
     constructor(private prisma: PrismaClient) {}
@@ -21,7 +21,7 @@ export class ChatRepository {
         if (existing) {
             const isNewer = existing.lastMessageAt ? timestamp > existing.lastMessageAt : true;
             
-            const updateData: any = {};
+            const updateData: Prisma.ChatUpdateInput = {};
             
             if (data.name) {
                 updateData.name = data.name;

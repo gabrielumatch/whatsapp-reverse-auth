@@ -63,9 +63,9 @@ describe('Integration: Redis Message Pipeline', () => {
         // Since `processBatch` is private, we can either make it public for testing or expose a `flush` method.
         // For testing, we can access it using `any`.
         
-        await (processor as any).processBatch(); // Batch 1
-        await (processor as any).processBatch(); // Batch 2
-        await (processor as any).processBatch(); // Empty check
+        await (processor as unknown as { processBatch: () => Promise<void> }).processBatch(); // Batch 1
+        await (processor as unknown as { processBatch: () => Promise<void> }).processBatch(); // Batch 2
+        await (processor as unknown as { processBatch: () => Promise<void> }).processBatch(); // Empty check
 
         // 3. Verify in Postgres
         const count = await prisma.message.count({
