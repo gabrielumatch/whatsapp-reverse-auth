@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupOutgoingMessageListener } from '../../lib/whatsapp/handlers/outgoing-handler';
+import { BotContext } from '../../lib/whatsapp/types';
 
 describe('OutgoingHandler', () => {
-    let mockCtx: any;
+    let mockCtx: BotContext;
     let mockMessageRepo: any;
     let mockSock: any;
 
@@ -19,7 +21,7 @@ describe('OutgoingHandler', () => {
             sessionId: 'test_session',
             messageRepo: mockMessageRepo,
             sock: mockSock
-        };
+        } as unknown as BotContext;
     });
 
     afterEach(() => {

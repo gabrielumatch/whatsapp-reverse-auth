@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { syncContact } from '../../lib/whatsapp/handlers/contact-handler';
+import { BotContext } from '../../lib/whatsapp/types';
 
 describe('ContactHandler', () => {
-    let mockCtx: any;
+    let mockCtx: BotContext;
     let mockContactRepo: any;
     let mockChatRepo: any;
     let mockSock: any;
@@ -20,7 +22,7 @@ describe('ContactHandler', () => {
             sock: mockSock,
             contactRepo: mockContactRepo,
             chatRepo: mockChatRepo
-        };
+        } as unknown as BotContext;
     });
 
     it('should sync contact info successfully', async () => {

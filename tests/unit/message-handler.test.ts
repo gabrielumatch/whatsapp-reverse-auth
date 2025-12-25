@@ -1,26 +1,29 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleIncomingMessage } from '../../lib/whatsapp/handlers/message-handler';
 import { BotContext } from '../../lib/whatsapp/types';
 
 // Mocks
-const mockGetOrCreateChat = vi.fn();
-const mockDownloadAndUploadMedia = vi.fn();
-const mockSyncContact = vi.fn().mockResolvedValue(undefined); // Fixed: must return promise
+const { mockGetOrCreateChat, mockDownloadAndUploadMedia, mockSyncContact } = vi.hoisted(() => ({
+    mockGetOrCreateChat: vi.fn(),
+    mockDownloadAndUploadMedia: vi.fn(),
+    mockSyncContact: vi.fn().mockResolvedValue(undefined)
+}));
 
 vi.mock('../../lib/whatsapp/handlers/chat-handler', () => ({
-    getOrCreateChat: (...args: any[]) => mockGetOrCreateChat(...args)
+    getOrCreateChat: mockGetOrCreateChat
 }));
 
 vi.mock('../../lib/whatsapp/handlers/media-handler', () => ({
-    downloadAndUploadMedia: (...args: any[]) => mockDownloadAndUploadMedia(...args)
+    downloadAndUploadMedia: mockDownloadAndUploadMedia
 }));
 
 vi.mock('../../lib/whatsapp/handlers/contact-handler', () => ({
-    syncContact: (...args: any[]) => mockSyncContact(...args)
+    syncContact: mockSyncContact
 }));
 
 describe('MessageHandler', () => {
-    let mockCtx: any;
+    let mockCtx: BotContext;
     let mockMessageRepo: any;
 
     beforeEach(() => {
@@ -33,7 +36,7 @@ describe('MessageHandler', () => {
             sessionId: 'test_session',
             sock: { user: { id: 'me@s.whatsapp.net' } },
             messageRepo: mockMessageRepo
-        };
+        } as unknown as BotContext;
     });
 
     it('should ignore messages without content', async () => {

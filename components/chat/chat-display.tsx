@@ -1,16 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Chat, Message } from "@/components/chat/data";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { ChatBottombar } from "@/components/chat/chat-bottombar";
-import {
-  IconPhone,
-  IconVideo,
-  IconInfoCircle,
-} from "@tabler/icons-react";
 import { AnimatePresence } from "framer-motion";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ChatDetails } from "./chat-details";
 import { Lightbox } from "@/components/ui/lightbox";
 import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";

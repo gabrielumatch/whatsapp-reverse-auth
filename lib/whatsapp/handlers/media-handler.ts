@@ -64,13 +64,3 @@ function getExtension(type: string): string {
         default: return 'bin';
     }
 }
-
-function getMimeType(type: string): string {
-    switch (type) {
-        case 'imageMessage': return 'image/jpeg';
-        case 'videoMessage': return 'video/mp4';
-        case 'audioMessage': return 'audio/mpeg';
-        case 'documentMessage': return 'application/pdf';
-        default: return 'application/octet-stream';
-    }
-}

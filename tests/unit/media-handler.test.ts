@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { downloadAndUploadMedia } from '../../lib/whatsapp/handlers/media-handler';
 import * as Baileys from '@whiskeysockets/baileys';
 import fs from 'fs';
-import path from 'path';
+import { BotContext } from '../../lib/whatsapp/types';
 
 // Mock Baileys
 vi.mock('@whiskeysockets/baileys', async () => {
@@ -23,14 +24,14 @@ vi.mock('fs', async () => {
 });
 
 describe('MediaHandler', () => {
-    let mockCtx: any;
+    let mockCtx: BotContext;
     let mockMessage: any;
 
     beforeEach(() => {
         mockCtx = {
             sessionId: 'test_session',
-            sock: { logger: { info: vi.fn() } }
-        };
+            sock: { logger: { info: vi.fn(), error: vi.fn(), debug: vi.fn() } }
+        } as unknown as BotContext;
         mockMessage = {
             key: { id: 'msg_123' },
             message: {
