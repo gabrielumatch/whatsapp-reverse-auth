@@ -18,10 +18,13 @@ export async function syncContact(ctx: BotContext, jid: string, pushName?: strin
         // 2. Fetch Status (About)
         let about: string | null = null;
         try {
-            const statusData = await sock.fetchStatus(jid);
-            if (statusData && Array.isArray(statusData) && statusData.length > 0) {
-                const firstResult = statusData[0] as { status?: string };
-                about = firstResult?.status || null;
+            const statusData: any = await sock.fetchStatus(jid);
+            if (statusData) {
+                if (Array.isArray(statusData) && statusData.length > 0) {
+                    about = typeof statusData[0].status === 'string' ? statusData[0].status : null;
+                } else if (typeof statusData.status === 'string') {
+                    about = statusData.status;
+                }
             }
         } catch {
              // Silently handle 401

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const chatId = searchParams.get("chatId");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const cursor = searchParams.get("cursor");
 
     if (!chatId) {
         return NextResponse.json({ error: "Missing chatId" }, { status: 400 });
@@ -12,21 +14,23 @@ export async function GET(request: NextRequest) {
     try {
         const messages = await prisma.message.findMany({
             where: { chatId },
-            orderBy: { timestamp: 'asc' }
+            take: limit,
+            skip: cursor ? 1 : 0,
+            cursor: cursor ? { id: cursor } : undefined,
+            orderBy: { timestamp: 'desc' }
         });
 
-        // Map Prisma fields to frontend expected format if needed
-        // (Our Prisma schema mostly matches, but let's be safe with camelCase)
-        // Actually, Prisma returns camelCase by default (chatId, isFromMe).
-        // But our old Supabase frontend expected snake_case (chat_id, is_from_me).
-        // I will map them to snake_case to minimize frontend refactoring.
-        
-        const mapped = messages.map(m => ({
+        // Reverse to show oldest -> newest
+        const reversed = messages.reverse();
+
+        // Map Prisma fields
+        const mapped = reversed.map(m => ({
             id: m.id,
             chat_id: m.chatId,
             session_id: m.sessionId,
             sender_jid: m.senderJid,
             content: m.content,
+            caption: m.caption,
             media_url: m.mediaUrl,
             message_type: m.messageType,
             timestamp: m.timestamp,

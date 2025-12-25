@@ -1,9 +1,10 @@
-import { PrismaClient } from "@prisma/client";
-import Redis from "ioredis";
+import type { PrismaClient } from "@prisma/client";
+import type Redis from "ioredis";
 
 export class MessageProcessor {
     private isProcessing = false;
-    private BATCH_SIZE = 100;
+    private BATCH_SIZE = parseInt(process.env.MESSAGE_BATCH_SIZE || "100");
+    private POLL_INTERVAL = parseInt(process.env.MESSAGE_POLL_INTERVAL_MS || "500");
     private QUEUE_KEY = "queue:messages";
 
     constructor(
@@ -12,9 +13,9 @@ export class MessageProcessor {
     ) {}
 
     async start() {
-        console.log("Starting Message Processor Worker...");
-        // Poll every 500ms
-        setInterval(() => this.processBatch(), 500);
+        console.log(`Starting Message Processor Worker (Batch: ${this.BATCH_SIZE}, Interval: ${this.POLL_INTERVAL}ms)...`);
+        // Poll based on config
+        setInterval(() => this.processBatch(), this.POLL_INTERVAL);
     }
 
     private async processBatch() {
@@ -56,7 +57,7 @@ export class MessageProcessor {
         }
     }
 
-    async enqueue(messageData: any) {
+    async enqueue(messageData: Record<string, unknown>) {
         await this.redis.rpush(this.QUEUE_KEY, JSON.stringify(messageData));
     }
 }

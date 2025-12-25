@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Chat } from '@/components/chat/data';
 
+interface Session {
+    id: string;
+    status: string;
+}
+
 export function useWhatsAppChats() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -8,16 +13,13 @@ export function useWhatsAppChats() {
 
   // 1. Get Session
   useEffect(() => {
-    // Ideally we list sessions. For now, fetch the first active one.
-    // Or we rely on the user passing it? The UI currently auto-selects.
-    // Let's fetch all sessions and pick one.
     const fetchSession = async () => {
         try {
             const res = await fetch('/api/sessions');
-            const data = await res.json();
+            const data = (await res.json()) as Session[];
             if (data && data.length > 0) {
                 // Prefer connected
-                const active = data.find((s: any) => s.status === 'connected') || data[0];
+                const active = data.find((s) => s.status === 'connected') || data[0];
                 setSessionId(active.id);
             } else {
                 setLoading(false);

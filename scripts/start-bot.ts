@@ -1,9 +1,8 @@
 import * as dotenv from "dotenv";
-dotenv.config({ path: ".env.docker" });
+dotenv.config();
 
 import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
-import * as Minio from "minio";
 import { startWhatsAppBot } from "../lib/whatsapp/bot";
 
 async function run() {
@@ -20,3 +19,5 @@ async function run() {
         console.error("Failed to start bot:", error);
     }
 }
+
+run();
