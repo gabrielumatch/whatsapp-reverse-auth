@@ -1,11 +1,10 @@
-import { ChatLayout } from "@/components/chat/chat-layout";
-
 export default function ChatsPage() {
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16))] flex-col gap-4 p-4 pt-0">
-        <div className="flex flex-1 flex-col overflow-hidden border rounded-lg shadow-sm bg-background">
-            <ChatLayout />
-        </div>
+    <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/5">
+      <div className="text-center">
+        <h3 className="text-lg font-medium">Select a chat</h3>
+        <p className="text-sm">Choose a conversation from the list to start messaging</p>
+      </div>
     </div>
   );
 }

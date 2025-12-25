@@ -6,11 +6,12 @@ import { IconSearch, IconLoader2 } from "@tabler/icons-react";
 
 interface ChatListProps {
   items: Chat[];
-  selectedChat: Chat | null;
-  setSelectedChat: (chat: Chat) => void;
+  selectedId?: string | null;
+  setSelectedChat?: (chat: Chat) => void;
   loadMore: () => void;
   hasMore: boolean;
   sessionId: string | null;
+  basePath?: string;
 }
 
 interface SearchChat {
@@ -24,7 +25,7 @@ interface SearchChat {
     unreadCount: number | null;
 }
 
-export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMore, sessionId }: ChatListProps) {
+export function ChatList({ items, selectedId, setSelectedChat, loadMore, hasMore, sessionId, basePath }: ChatListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Chat[]>([]);
@@ -109,8 +110,9 @@ export function ChatList({ items, selectedChat, setSelectedChat, loadMore, hasMo
             <ChatListItem 
                 key={item.id} 
                 item={item} 
-                isSelected={selectedChat?.id === item.id} 
-                onClick={setSelectedChat} 
+                isSelected={selectedId === item.id} 
+                onClick={setSelectedChat}
+                href={basePath ? `${basePath}/${item.id}` : undefined}
             />
         ))}
         

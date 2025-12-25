@@ -32,8 +32,10 @@ export function useWhatsAppMessages(chatId: string | null) {
     staleTime: Infinity, 
   });
 
-  // Flatten pages and sort Oldest -> Newest for display
-  const messages = data ? data.pages.flat().sort((a, b) => 
+  // Flatten pages, dedup, and sort Oldest -> Newest for display
+  const messages = data ? Array.from(new Map(
+      data.pages.flat().map(m => [m.id, m])
+  ).values()).sort((a, b) => 
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   ) : [];
 
