@@ -68,6 +68,94 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_chats: {
+        Row: {
+          id: string
+          session_id: string
+          jid: string
+          name: string | null
+          avatar_url: string | null
+          last_message_at: string | null
+          last_message_content: string | null
+          unread_count: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          jid: string
+          name?: string | null
+          avatar_url?: string | null
+          last_message_at?: string | null
+          last_message_content?: string | null
+          unread_count?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          jid?: string
+          name?: string | null
+          avatar_url?: string | null
+          last_message_at?: string | null
+          last_message_content?: string | null
+          unread_count?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          chat_id: string
+          session_id: string
+          message_id: string | null
+          sender_jid: string
+          content: string | null
+          message_type: string | null
+          timestamp: string | null
+          status: string | null
+          is_from_me: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          session_id: string
+          message_id?: string | null
+          sender_jid: string
+          content?: string | null
+          message_type?: string | null
+          timestamp?: string | null
+          status?: string | null
+          is_from_me?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          session_id?: string
+          message_id?: string | null
+          sender_jid?: string
+          content?: string | null
+          message_type?: string | null
+          timestamp?: string | null
+          status?: string | null
+          is_from_me?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            referencedRelation: "whatsapp_chats"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

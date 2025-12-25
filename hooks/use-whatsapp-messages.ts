@@ -35,13 +35,19 @@ export function useWhatsAppMessages(chatId: string | null) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'whatsapp_messages',
           filter: `chat_id=eq.${chatId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          if (payload.eventType === 'INSERT') {
+             setMessages((prev) => [...prev, payload.new as Message]);
+          } else if (payload.eventType === 'UPDATE') {
+             setMessages((prev) => 
+                prev.map(msg => msg.id === payload.new.id ? payload.new as Message : msg)
+             );
+          }
         }
       )
       .subscribe();

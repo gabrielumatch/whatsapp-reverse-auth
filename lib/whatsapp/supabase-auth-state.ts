@@ -17,10 +17,7 @@ export type SupabaseAuthState = {
  * Custom Baileys authentication state that persists data to Supabase.
  * Optimized for Baileys v7.
  */
-export async function useSupabaseAuthState(
-    supabase: SupabaseClient<Database>,
-    sessionId: string
-): Promise<SupabaseAuthState> {
+export const getSupabaseAuthState = async (supabase: SupabaseClient<Database>, sessionId: string) => {
     
     // 1. Load or Initialize Credentials
     const { data: credsData } = await supabase
