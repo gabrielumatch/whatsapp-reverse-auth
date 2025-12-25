@@ -13,30 +13,46 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const whereClause: any = { sessionId };
+        // Raw SQL for performant "Latest Message per Chat"
+        // We use a CTE or Lateral Join to get the latest message for each chat
+        // Then sort by that message's timestamp
         
-        if (cursor) {
-            whereClause.lastMessageAt = {
-                lt: new Date(cursor)
-            };
-        }
+        const cursorDate = cursor ? new Date(cursor).toISOString() : null;
 
-        const chats = await prisma.chat.findMany({
-            where: whereClause,
-            take: limit,
-            orderBy: { lastMessageAt: 'desc' }
-        });
-// ...
+        const chats = await prisma.$queryRaw`
+            SELECT 
+                c.id, 
+                c.session_id, 
+                c.jid, 
+                c.name, 
+                c."avatar_url", 
+                c."unread_count",
+                m.content as last_message_content,
+                m.timestamp as last_message_at
+            FROM "whatsapp_chats" c
+            LEFT JOIN LATERAL (
+                SELECT content, timestamp
+                FROM "whatsapp_messages" m
+                WHERE m.chat_id = c.id
+                ORDER BY m.timestamp DESC
+                LIMIT 1
+            ) m ON true
+            WHERE c.session_id = ${sessionId}
+            AND (${cursorDate}::timestamp IS NULL OR m.timestamp < ${cursorDate}::timestamp)
+            ORDER BY m.timestamp DESC NULLS LAST
+            LIMIT ${limit}
+        `;
 
-        const mapped = chats.map(c => ({
+        // Map fields to match frontend expectation (snake_case from raw query might need manual mapping if type is lost)
+        const mapped = (chats as any[]).map(c => ({
             id: c.id,
-            session_id: c.sessionId,
+            session_id: c.session_id,
             jid: c.jid,
             name: c.name,
-            avatar_url: c.avatarUrl,
-            last_message_at: c.lastMessageAt,
-            last_message_content: c.lastMessageContent,
-            unread_count: c.unreadCount
+            avatar_url: c.avatar_url,
+            last_message_at: c.last_message_at,
+            last_message_content: c.last_message_content,
+            unread_count: c.unread_count || 0
         }));
 
         return NextResponse.json(mapped);
