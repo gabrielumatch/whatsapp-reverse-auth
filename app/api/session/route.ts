@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const querySchema = z.object({
+    sessionId: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
-    const searchParams = request.nextUrl.searchParams;
-    const sessionId = searchParams.get("sessionId");
+    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+    const result = querySchema.safeParse(searchParams);
 
-    if (!sessionId) {
-        return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
+    if (!result.success) {
+        return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
     }
+
+    const { sessionId } = result.data;
 
     try {
         const session = await prisma.session.findUnique({

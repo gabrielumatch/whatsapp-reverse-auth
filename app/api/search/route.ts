@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { mapChatToDto, mapMessageToDto } from "@/lib/mappers";
+import { z } from "zod";
+
+const querySchema = z.object({
+    sessionId: z.string(),
+    query: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
-    const searchParams = request.nextUrl.searchParams;
-    const sessionId = searchParams.get("sessionId");
-    const query = searchParams.get("query");
+    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+    const result = querySchema.safeParse(searchParams);
 
-    if (!sessionId || !query) {
-        return NextResponse.json({ error: "Missing sessionId or query" }, { status: 400 });
+    if (!result.success) {
+        return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
     }
+
+    const { sessionId, query } = result.data;
 
     try {
         // Search messages
@@ -45,7 +52,7 @@ export async function GET(request: NextRequest) {
             chats: chats.map(mapChatToDto) 
         });
     } catch (error) {
-        console.error(error);
+        console.error("Search Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
