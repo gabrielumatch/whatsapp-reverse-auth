@@ -1,7 +1,8 @@
 import makeWASocket, { 
     DisconnectReason, 
     fetchLatestBaileysVersion, 
-    makeCacheableSignalKeyStore 
+    makeCacheableSignalKeyStore,
+    proto 
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import { SupabaseClient } from "@supabase/supabase-js";

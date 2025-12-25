@@ -1,4 +1,5 @@
 import { BotContext } from "../types";
+import { TablesUpdate } from "@/lib/supabase/database.types";
 
 export async function getOrCreateChat(
     ctx: BotContext,
@@ -17,7 +18,7 @@ export async function getOrCreateChat(
         .single();
 
     if (existingChat) {
-        const updatePayload: any = {
+        const updatePayload: TablesUpdate<"whatsapp_chats"> = {
             last_message_at: new Date().toISOString(),
             last_message_content: lastMessageText,
         };
@@ -36,8 +37,6 @@ export async function getOrCreateChat(
         return existingChat.id;
     } else {
         // 2. Create new chat
-        const isFromMe = jid === sock.user?.id?.split(':')[0]; // Rough check, but usually caller handles naming
-        
         // If pushName is provided, use it. Otherwise fall back to number.
         const displayName = pushName || jid.split("@")[0];
 

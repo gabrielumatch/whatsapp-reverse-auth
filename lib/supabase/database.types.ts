@@ -68,6 +68,49 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_contacts: {
+        Row: {
+          id: string
+          session_id: string
+          jid: string
+          name: string | null
+          about: string | null
+          profile_picture_url: string | null
+          last_seen: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          jid: string
+          name?: string | null
+          about?: string | null
+          profile_picture_url?: string | null
+          last_seen?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          jid?: string
+          name?: string | null
+          about?: string | null
+          profile_picture_url?: string | null
+          last_seen?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_session_id_fkey"
+            columns: ["session_id"]
+            referencedRelation: "whatsapp_sessions_metadata"
+            referencedColumns: ["session_id"]
+          }
+        ]
+      }
       whatsapp_chats: {
         Row: {
           id: string
@@ -115,6 +158,8 @@ export type Database = {
           message_id: string | null
           sender_jid: string
           content: string | null
+          media_url: string | null
+          caption: string | null
           message_type: string | null
           timestamp: string | null
           status: string | null
@@ -128,6 +173,8 @@ export type Database = {
           message_id?: string | null
           sender_jid: string
           content?: string | null
+          media_url?: string | null
+          caption?: string | null
           message_type?: string | null
           timestamp?: string | null
           status?: string | null
@@ -141,6 +188,8 @@ export type Database = {
           message_id?: string | null
           sender_jid?: string
           content?: string | null
+          media_url?: string | null
+          caption?: string | null
           message_type?: string | null
           timestamp?: string | null
           status?: string | null

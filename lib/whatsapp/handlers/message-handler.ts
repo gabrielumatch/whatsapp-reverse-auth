@@ -1,6 +1,9 @@
-import { WAMessage, proto } from "@whiskeysockets/baileys";
+import { WAMessage } from "@whiskeysockets/baileys";
 import { BotContext } from "../types";
 import { getOrCreateChat } from "./chat-handler";
+import { syncContact } from "./contact-handler";
+import { downloadAndUploadMedia } from "./media-handler";
+import Long from "long";
 
 export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     const { supabase, sessionId, sock } = ctx;
@@ -12,20 +15,32 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
     const messageId = key.id;
     const isFromMe = key.fromMe || false;
 
-    if (!remoteJid) return;
+    if (!remoteJid || !messageId) return;
 
-    // Extract text content
-    const text =
-        m.message.conversation ||
-        m.message.extendedTextMessage?.text ||
-        m.message.imageMessage?.caption ||
-        ""; // Handle other types as needed
+    // Extract content
+    const msgType = Object.keys(m.message)[0];
+    
+    // Text extraction logic
+    let text = "";
+    let caption = null;
+
+    if (msgType === 'conversation') {
+        text = m.message.conversation || "";
+    } else if (msgType === 'extendedTextMessage') {
+        text = m.message.extendedTextMessage?.text || "";
+    } else if (msgType === 'imageMessage') {
+        caption = m.message.imageMessage?.caption || null;
+        text = caption || "📷 Image";
+    } else if (msgType === 'videoMessage') {
+        caption = m.message.videoMessage?.caption || null;
+        text = caption || "🎥 Video";
+    } else {
+        text = msgType;
+    }
 
     console.log(`Received message from ${remoteJid}: ${text}`);
 
     // Determine Push Name logic for Chat Naming
-    // If incoming (!isFromMe), use m.pushName.
-    // If outgoing (isFromMe), do NOT use m.pushName (it's us). Pass null so logic uses JID or existing name.
     const contactName = !isFromMe ? m.pushName : null;
 
     // 1. Get or Create Chat
@@ -43,7 +58,13 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     if (existing) return;
 
-    // 3. Insert Message
+    // 3. Handle Media Download
+    let mediaPath: string | null = null;
+    if (['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'].includes(msgType)) {
+        mediaPath = await downloadAndUploadMedia(ctx, m);
+    }
+
+    // 4. Insert Message
     const timestamp = getMessageTimestamp(m.messageTimestamp);
     
     const { error: msgError } = await supabase
@@ -53,15 +74,25 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
             session_id: sessionId,
             message_id: messageId,
             sender_jid: isFromMe ? (sock.user?.id?.split(':')[0] + '@s.whatsapp.net') : remoteJid,
-            content: text,
-            message_type: Object.keys(m.message)[0],
+            content: text, // Display text (caption or placeholder)
+            caption: caption,
+            media_url: mediaPath, // Path in bucket
+            message_type: msgType,
             timestamp: timestamp.toISOString(),
             is_from_me: isFromMe,
-            status: "delivered", // incoming messages are implicitly delivered to us
+            status: "delivered", 
         });
 
     if (msgError) {
         console.error("Error saving message:", msgError);
+    }
+
+    // 5. Background: Sync Contact Info (Profile Pic, About)
+    if (!isFromMe) {
+        // Fire and forget - don't await
+        syncContact(ctx, remoteJid, contactName).catch(err => 
+            console.error("Background sync failed:", err)
+        );
     }
 }
 
@@ -70,8 +101,8 @@ function getMessageTimestamp(ts: number | Long | null | undefined): Date {
         return new Date(ts * 1000);
     }
     // Handle Long object (has low/high or toNumber)
-    if (ts && typeof ts === 'object' && 'toNumber' in ts) {
-        return new Date((ts as any).toNumber() * 1000);
+    if (ts && typeof ts === 'object' && 'toNumber' in ts && typeof (ts as { toNumber: unknown }).toNumber === 'function') {
+        return new Date((ts as { toNumber: () => number }).toNumber() * 1000);
     }
     // Fallback to now if missing
     return new Date();

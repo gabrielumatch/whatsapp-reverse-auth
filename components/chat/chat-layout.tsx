@@ -44,7 +44,7 @@ export function ChatLayout() {
   const sendMessage = async (messageContent: string) => {
     if (!selectedChat || !sessionId) return;
 
-    const { error } = await supabase.from("whatsapp_messages").insert({
+    const payload = {
         chat_id: selectedChat.id,
         session_id: sessionId,
         sender_jid: "me", // Placeholder
@@ -52,10 +52,17 @@ export function ChatLayout() {
         is_from_me: true,
         status: "sent",
         timestamp: new Date().toISOString()
-    });
+    };
+
+    console.log("Sending payload:", payload);
+
+    const { error } = await supabase.from("whatsapp_messages").insert(payload);
 
     if (error) {
         console.error("Failed to send message:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Error details:", error.details);
     }
   };
 
