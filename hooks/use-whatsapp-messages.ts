@@ -23,10 +23,10 @@ export function useWhatsAppMessages(chatId: string | null) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: Message[]) => {
-      // API returns Newest -> Oldest.
-      // So the last element is the oldest.
+      // API returns Oldest -> Newest (ASC).
+      // So the first element is the oldest.
       if (lastPage.length < PAGE_SIZE) return null;
-      return lastPage[lastPage.length - 1]?.id; 
+      return lastPage[0]?.id; 
     },
     enabled: !!chatId,
     staleTime: Infinity, 

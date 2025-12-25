@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef } from "react";
 import { Chat, Message } from "@/components/chat/data";
 import { ChatBottombar } from "@/components/chat/chat-bottombar";
