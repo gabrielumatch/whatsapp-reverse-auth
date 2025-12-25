@@ -1,50 +1,82 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface Session {
     id: string; // mapped from session_id
     status: string;
     phoneNumber: string | null;
+    qrCode?: string | null;
     updatedAt: string;
 }
 
 export function useSessions() {
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    const fetchSessions = async () => {
-        try {
+    // 1. Fetch Sessions
+    const { data: sessions = [], isLoading } = useQuery<Session[]>({
+        queryKey: ['sessions'],
+        queryFn: async () => {
             const res = await fetch('/api/sessions');
-            const data = await res.json();
-            setSessions(data);
-        } catch (error) {
-            console.error("Error fetching sessions:", error);
-            toast.error("Failed to load sessions");
-        }
-        setLoading(false);
-    };
+            if (!res.ok) throw new Error("Failed to fetch sessions");
+            return res.json();
+        },
+        staleTime: Infinity, // Rely on SSE for updates
+    });
 
-    const removeSession = async (sessionId: string) => {
-        try {
+    // 2. Remove Session Mutation
+    const { mutate: removeSession } = useMutation({
+        mutationFn: async (sessionId: string) => {
             const res = await fetch(`/api/sessions?sessionId=${sessionId}`, {
                 method: 'DELETE'
             });
-            
-            if (res.ok) {
-                toast.success("Session removed");
-                fetchSessions();
-            } else {
-                toast.error("Failed to remove session");
-            }
-        } catch (error) {
-            console.error("Error deleting session:", error);
+            if (!res.ok) throw new Error("Failed to remove session");
+        },
+        onSuccess: (_, sessionId) => {
+            toast.success("Session removed");
+            // Optimistic update or refetch
+            queryClient.setQueryData<Session[]>(['sessions'], (old) => 
+                old?.filter(s => s.id !== sessionId) || []
+            );
+        },
+        onError: () => {
             toast.error("Failed to remove session");
         }
-    };
+    });
 
+    // 3. Realtime Updates
     useEffect(() => {
-        fetchSessions();
-    }, []);
+        const eventSource = new EventSource('/api/stream/session-status');
 
-    return { sessions, loading, removeSession };
+        eventSource.onmessage = (event) => {
+            try {
+                const update = JSON.parse(event.data) as Partial<Session> & { id: string };
+                
+                queryClient.setQueryData<Session[]>(['sessions'], (old) => {
+                    if (!old) return old;
+                    
+                    const exists = old.find(s => s.id === update.id);
+                    if (exists) {
+                        return old.map(s => s.id === update.id ? { ...s, ...update } : s);
+                    } else {
+                        // If it's a new session we don't know about, maybe refetch or append?
+                        // For this app, sessions are pre-created usually. 
+                        // But let's assume we can append if it has minimal fields.
+                        if (update.status) {
+                             return [...old, update as Session];
+                        }
+                        return old;
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to parse SSE session update:", e);
+            }
+        };
+
+        return () => {
+            eventSource.close();
+        };
+    }, [queryClient]);
+
+    return { sessions, loading: isLoading, removeSession };
 }

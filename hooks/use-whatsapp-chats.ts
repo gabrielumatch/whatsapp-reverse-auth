@@ -1,18 +1,19 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Chat } from '@/components/chat/data';
+import { useInfiniteQuery, useQueryClient, InfiniteData } from '@tanstack/react-query';
 
 interface Session {
     id: string;
     status: string;
 }
 
-export function useWhatsAppChats() {
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
+const PAGE_SIZE = 20;
 
-  // 1. Get Session
+export function useWhatsAppChats() {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // 1. Get Session (Connection Info)
   useEffect(() => {
     const fetchSession = async () => {
         try {
@@ -21,61 +22,43 @@ export function useWhatsAppChats() {
             if (data && data.length > 0) {
                 const active = data.find((s) => s.status === 'connected') || data[0];
                 setSessionId(active.id);
-            } else {
-                setLoading(false);
             }
         } catch (e) {
-            console.error(e);
-            setLoading(false);
+            console.error("Session fetch error:", e);
         }
     };
     fetchSession();
   }, []);
 
-  // 2. Fetch Initial Chats
-  const fetchChats = useCallback(async (currentSessionId: string, cursor?: string) => {
-      try {
-        const url = `/api/chats?sessionId=${currentSessionId}&limit=20` + (cursor ? `&cursor=${cursor}` : '');
-        const res = await fetch(url);
-        const data = await res.json();
-        return data;
-      } catch (e) {
-        console.error(e);
-        return [];
-      }
-  }, []);
+  // 2. Fetch Infinite Chats
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isLoading
+  } = useInfiniteQuery<Chat[], Error, InfiniteData<Chat[]>>({
+    queryKey: ['chats', sessionId],
+    queryFn: async ({ pageParam }) => {
+      if (!sessionId) return [];
+      const cursor = pageParam ? `&cursor=${pageParam}` : '';
+      const url = `/api/chats?sessionId=${sessionId}&limit=${PAGE_SIZE}${cursor}`;
+      const res = await fetch(url);
+      return res.json();
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage: Chat[]) => {
+      if (lastPage.length < PAGE_SIZE) return null;
+      // The API returns chats sorted by last_message_at DESC.
+      // So the last item is the oldest.
+      return lastPage[lastPage.length - 1]?.last_message_at;
+    },
+    enabled: !!sessionId,
+    staleTime: 30 * 1000, // Consider chats fresh for 30s
+  });
 
-  useEffect(() => {
-    if (!sessionId) return;
-    setLoading(true);
-    
-    fetchChats(sessionId).then(data => {
-        setChats(data);
-        setHasMore(data.length === 20);
-        setLoading(false);
-    });
-  }, [sessionId, fetchChats]);
+  const chats = data ? data.pages.flat() : [];
 
-  const loadMore = async () => {
-      if (!sessionId || !hasMore || chats.length === 0) return;
-      
-      const lastChat = chats[chats.length - 1];
-      const cursor = lastChat.last_message_at; // Use this as cursor
-      
-      const moreChats = await fetchChats(sessionId, cursor);
-      
-      if (moreChats.length < 20) setHasMore(false);
-      
-      if (moreChats.length > 0) {
-          setChats(prev => {
-              const existingIds = new Set(prev.map(c => c.id));
-              const uniqueMore = moreChats.filter((c: Chat) => !existingIds.has(c.id));
-              return [...prev, ...uniqueMore];
-          });
-      }
-  };
-
-  // Realtime subscription (SSE)
+  // 3. Realtime subscription (SSE)
   useEffect(() => {
       if (!sessionId) return;
 
@@ -98,13 +81,37 @@ export function useWhatsAppChats() {
                   last_message_at: rawChat.lastMessageAt
               };
 
-              setChats(prev => {
-                  const map = new Map(prev.map(c => [c.id, c]));
-                  map.set(updatedChat.id, updatedChat);
-                  
-                  return Array.from(map.values()).sort((a, b) => 
-                      new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
-                  );
+              queryClient.setQueryData<InfiniteData<Chat[]>>(['chats', sessionId], (oldData) => {
+                  if (!oldData) return oldData;
+
+                  let updated = false;
+
+                  const newPages = oldData.pages.map((page: Chat[]) => {
+                      const exists = page.find(c => c.id === updatedChat.id);
+                      if (exists) {
+                          updated = true;
+                          return page.map(c => c.id === updatedChat.id ? updatedChat : c);
+                      }
+                      return page;
+                  });
+
+                  if (!updated) {
+                      // Prepend to the first page (newest chunk)
+                      if (newPages.length > 0) {
+                          newPages[0] = [updatedChat, ...newPages[0]];
+                      } else {
+                          newPages[0] = [updatedChat];
+                      }
+                  }
+
+                  // Re-sort the entire flattened dataset and put it into pages?
+                  // For chats, we strictly want DESC order by last_message_at.
+                  // Since updates happen at the top, we just need to ensure the flattened view 
+                  // used in the UI stays sorted.
+                  return {
+                      ...oldData,
+                      pages: newPages
+                  };
               });
 
           } catch (e) {
@@ -119,7 +126,15 @@ export function useWhatsAppChats() {
       return () => {
           eventSource.close();
       };
-  }, [sessionId]);
+  }, [sessionId, queryClient]);
 
-  return { chats, sessionId, loading, loadMore, hasMore };
+  return { 
+    chats: chats.sort((a, b) => 
+        new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+    ), 
+    sessionId, 
+    loading: isLoading, 
+    loadMore: fetchNextPage, 
+    hasMore: hasNextPage 
+  };
 }

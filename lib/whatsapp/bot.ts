@@ -81,6 +81,7 @@ export async function startWhatsAppBot(
             if (qr) {
                 console.log("New QR Code generated.");
                 await sessionRepo.updateQr(sessionId, qr);
+                await redis.publish('updates:session-status', JSON.stringify({ id: sessionId, status: 'connecting', qrCode: qr }));
             }
 
             if (connection === "close") {
@@ -95,13 +96,16 @@ export async function startWhatsAppBot(
                 }
 
                 await sessionRepo.updateStatus(sessionId, "disconnected");
+                await redis.publish('updates:session-status', JSON.stringify({ id: sessionId, status: 'disconnected' }));
 
                 if (shouldReconnect) {
                     startWhatsAppBot(prisma, redis, sessionId);
                 }
             } else if (connection === "open") {
                 console.log("Opened connection");
-                await sessionRepo.updateStatus(sessionId, "connected", sock.user?.id.split(":")[0]);
+                const phoneNumber = sock.user?.id.split(":")[0];
+                await sessionRepo.updateStatus(sessionId, "connected", phoneNumber);
+                await redis.publish('updates:session-status', JSON.stringify({ id: sessionId, status: 'connected', phoneNumber }));
             }
         }
 
