@@ -3,6 +3,7 @@ import { BotContext } from "../types";
 import { getOrCreateChat } from "./chat-handler";
 import { syncContact } from "./contact-handler";
 import { downloadAndUploadMedia } from "./media-handler";
+import { logger } from "@/lib/logger";
 
 /**
  * Main processor for incoming and synced messages.
@@ -70,7 +71,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         try {
             mediaPath = await downloadAndUploadMedia(ctx, m);
         } catch (err) {
-            console.error("Failed to download/upload media:", err);
+            logger.error({ err }, "Failed to download/upload media");
         }
     }
 
@@ -94,7 +95,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         await ctx.redis.publish(`updates:chat:${chatId}`, JSON.stringify(newMessage));
         
     } catch (err) {
-        console.error("Error saving message:", err);
+        logger.error({ err }, "Error saving message");
     }
 
     // 5. Background: Sync Contact Info

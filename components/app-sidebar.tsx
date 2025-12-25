@@ -2,11 +2,11 @@
 
 import * as React from "react"
 import {
+  IconBrandGithub,
   IconDashboard,
   IconHelp,
   IconInnerShadowTop,
   IconMessage2,
-  IconSearch,
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react"
@@ -56,13 +56,15 @@ const data = {
     },
     {
       title: "Get Help",
-      url: "#",
+      url: "/api-docs",
       icon: IconHelp,
+      external: true,
     },
     {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
+      title: "Github",
+      url: "https://github.com/gabrielumatch?tab=repositories",
+      icon: IconBrandGithub,
+      external: true,
     },
   ],
 }

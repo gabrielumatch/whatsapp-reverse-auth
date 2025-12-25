@@ -48,9 +48,9 @@ describe('ContactHandler', () => {
         await syncContact(mockCtx, jid, null);
 
         expect(mockContactRepo.upsertContact).toHaveBeenCalledWith('test_session', jid, {
-            name: null,
-            about: null,
-            profilePictureUrl: null
+            name: undefined,
+            about: undefined,
+            profilePictureUrl: undefined
         });
     });
 });

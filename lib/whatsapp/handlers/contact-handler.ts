@@ -1,49 +1,41 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BotContext } from "../types";
+import { logger } from "@/lib/logger";
 
-/**
- * Syncs profile picture and bio from WhatsApp to Postgres via Prisma.
- */
 export async function syncContact(ctx: BotContext, jid: string, pushName?: string | null) {
     const { sessionId, sock, contactRepo, chatRepo } = ctx;
 
     try {
-        // 1. Fetch Profile Pic
-        let profilePicUrl: string | null = null;
+        let profilePictureUrl: string | undefined;
+        let about: string | undefined;
+
         try {
-            profilePicUrl = (await sock.profilePictureUrl(jid, "image")) || null;
+            profilePictureUrl = await sock.profilePictureUrl(jid, "image");
         } catch {
-            // Silently handle 401/404
+            // Ignore 401/404
         }
 
-        // 2. Fetch Status (About)
-        let about: string | null = null;
         try {
-            const statusData: any = await sock.fetchStatus(jid);
-            if (statusData) {
-                if (Array.isArray(statusData) && statusData.length > 0) {
-                    about = typeof statusData[0].status === 'string' ? statusData[0].status : null;
-                } else if (typeof statusData.status === 'string') {
-                    about = statusData.status;
-                }
+            // fetchStatus returns USyncQueryResultList[]
+            const status = await sock.fetchStatus(jid);
+            if (Array.isArray(status) && status.length > 0) {
+                const s = status[0].status;
+                about = typeof s === 'string' ? s : undefined;
             }
         } catch {
-             // Silently handle 401
+            // Ignore
         }
 
-        // 3. Upsert into Contact
         await contactRepo.upsertContact(sessionId, jid, {
-            name: pushName,
+            name: pushName || undefined,
             about,
-            profilePictureUrl: profilePicUrl
+            profilePictureUrl
         });
 
-        // 4. Update Chat Avatar
-        if (profilePicUrl) {
-            await chatRepo.updateAvatar(sessionId, jid, profilePicUrl);
+        if (profilePictureUrl) {
+            await chatRepo.updateAvatar(sessionId, jid, profilePictureUrl);
         }
 
     } catch (e) {
-        console.error("Non-critical error syncing contact:", jid, e);
+        logger.warn({ jid, err: e }, "Non-critical error syncing contact");
     }
 }

@@ -1,47 +1,39 @@
 import { BotContext } from "../types";
+import { logger } from "@/lib/logger";
 
 export function setupOutgoingMessageListener(ctx: BotContext) {
-    const { sessionId, sock, messageRepo } = ctx;
+    const { sessionId, messageRepo, sock } = ctx;
 
-    console.log("Starting outgoing message polling for session:", sessionId);
+    logger.info({ sessionId }, "Starting outgoing message polling");
 
-    let processing = false;
-
+    // Poll every 1s for pending outgoing messages
+    // Ideally this should use Redis PubSub from API, but for simplicity we poll DB
     setInterval(async () => {
-        if (processing) return;
-        processing = true;
-
         try {
-            // Fetch pending messages
-            const messages = await messageRepo.findPendingOutgoing(sessionId);
+            const pending = await messageRepo.findPendingOutgoing(sessionId);
+            
+            for (const msg of pending) {
+                if (!msg.chat) continue;
 
-            for (const msg of messages) {
-                console.log("Processing outgoing message:", msg.id);
+                try {
+                    logger.info({ msgId: msg.id, jid: msg.chat.jid }, "Processing outgoing message");
 
-                if (msg.chat && msg.chat.jid) {
-                    try {
-                        // Send via WhatsApp
-                        const text = msg.content || "";
-                        
-                        const sentMsg = await sock.sendMessage(msg.chat.jid, { text });
-                        console.log("Message sent to WhatsApp:", msg.chat.jid, sentMsg?.key.id);
+                    // Send via Baileys
+                    const sentMsg = await sock.sendMessage(msg.chat.jid, { 
+                        text: msg.content || "" 
+                    });
 
-                        // Update status
-                        await messageRepo.updateStatus(msg.id, "delivered", sentMsg?.key.id || undefined);
+                    logger.info({ jid: msg.chat.jid, waId: sentMsg?.key.id }, "Message sent to WhatsApp");
 
-                    } catch (err) {
-                        console.error("Failed to send message:", err);
-                        await messageRepo.updateStatus(msg.id, "failed");
-                    }
-                } else {
-                    console.error("Chat not found for outgoing message:", msg.chatId);
+                    // Update Status
+                    await messageRepo.updateStatus(msg.id, "delivered", sentMsg?.key.id || undefined);
+                } catch (err) {
+                    logger.error({ sessionId, msgId: msg.id, err }, "Failed to send message");
+                    await messageRepo.updateStatus(msg.id, "failed");
                 }
             }
-
         } catch (err) {
-            console.error("Error in outgoing polling:", err);
-        } finally {
-            processing = false;
+            logger.error({ sessionId, err }, "Error in outgoing polling");
         }
-    }, 1000); // Poll every second
+    }, 1000);
 }

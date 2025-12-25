@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { API_ERRORS } from "./constants";
+import { logger } from "@/lib/logger";
 
 export type ApiFunction = () => Promise<NextResponse | Response>;
 
@@ -15,7 +16,7 @@ export async function apiHandler(fn: ApiFunction): Promise<NextResponse | Respon
             );
         }
 
-        console.error("API Error:", error);
+        logger.error({ err: error }, "API Error");
         return NextResponse.json(
             { error: API_ERRORS.INTERNAL_SERVER_ERROR },
             { status: 500 }

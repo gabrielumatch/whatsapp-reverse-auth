@@ -4,11 +4,12 @@ A scalable, self-hosted WhatsApp automation system built with Next.js, Baileys, 
 
 ## 🏗️ Architecture
 
-*   **Frontend**: Next.js 15 (App Router, API Routes).
-*   **Bot Backend**: Node.js worker using Baileys.
-*   **Database**: PostgreSQL 15.
+*   **Frontend**: Next.js 15 (App Router, Server-Side Hydration, React Query).
+*   **Realtime**: Redis Pub/Sub + Server-Sent Events (SSE).
+*   **Bot Backend**: Node.js worker using Baileys (Multi-Device).
+*   **Database**: PostgreSQL 15 (Prisma ORM).
 *   **Queue/Cache**: Redis 7.
-*   **Storage**: Local Filesystem (served via API proxy).
+*   **Storage**: Local Filesystem (streamed via API).
 
 ## 🚀 Getting Started
 
@@ -23,24 +24,10 @@ docker-compose up -d
 ```
 
 ### 2. Configure Environment
-Create `.env` in the root:
-```env
-# Database
-DATABASE_URL="postgresql://whatsapp:whatsapp_password@localhost:5432/whatsapp_db"
-
-# Redis
-REDIS_URL="redis://localhost:6379"
-
-# Bot Session
-SESSION_ID="my_session_v1"
-
-# Performance Tuning
-MESSAGE_BATCH_SIZE="100"
-MESSAGE_POLL_INTERVAL_MS="500"
-```
+Create `.env` in the root (see `.env.example`).
 
 ### 3. Initialize Database
-Apply the Prisma schema:
+Apply the Prisma schema and migrations:
 ```bash
 npx prisma generate
 npx prisma db push
@@ -61,6 +48,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and scan the QR code.
 
+## 📡 API Reference
+
+### 📖 Interactive Documentation
+Explore and test the API using the built-in [Scalar UI](http://localhost:3000/api-docs).
+
+### Realtime Streams
+*   `GET /api/stream/session-status`: Updates for QR codes and connection state.
+*   `GET /api/stream/chats?sessionId=...`: Updates for the chat list.
+*   `GET /api/stream/messages?chatId=...`: Updates for a specific conversation.
+
+### REST Endpoints
+*   `GET /api/chats`: List chats (Cursor pagination).
+*   `GET /api/messages`: List messages (Cursor pagination).
+*   `GET /api/search`: Full-text search for chats and messages.
+*   `GET /api/media/...`: Secure media streaming.
+
 ## 🧪 Testing
 
 Run the full test suite (Unit + Integration):
@@ -68,13 +71,15 @@ Run the full test suite (Unit + Integration):
 npx vitest run
 ```
 
-## 📂 Key Directories
-*   `lib/whatsapp/repositories`: Database access.
-*   `lib/whatsapp/workers`: Message queue processing.
-*   `components/chat`: UI components (Bubble, Header, Sidebar).
-*   `storage/`: Where media files are saved.
+## 🛠️ Performance Features
+*   **Server-Side Hydration**: Initial chat state is pre-rendered on the server for instant LCP.
+*   **Infinite Queries**: Robust pagination for unlimited chat history.
+*   **Optimistic Updates**: Immediate UI feedback for session actions.
+*   **Batched Inserts**: High-volume message syncing handled via Redis queue.
+*   **Media Streaming**: Large files are streamed using Node.js streams.
 
-## 🛠️ Troubleshooting
-*   **"Stream Errored"**: Normal during first pair. The bot auto-restarts.
-*   **"Bad Decrypt"**: Session corruption. Delete the session from DB and restart.
-*   **Empty Chat List**: Ensure the bot completed the initial history sync.
+## 📂 Key Directories
+*   `lib/whatsapp/repositories`: Database access layer.
+*   `lib/whatsapp/workers`: Message queue processors.
+*   `hooks/`: React Query hooks with SSE integration.
+*   `app/api/`: Zod-validated API routes.

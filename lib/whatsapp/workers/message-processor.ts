@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type Redis from "ioredis";
+import { logger } from "@/lib/logger";
 
 export class MessageProcessor {
     private isProcessing = false;
@@ -13,7 +14,7 @@ export class MessageProcessor {
     ) {}
 
     async start() {
-        console.log(`Starting Message Processor Worker (Batch: ${this.BATCH_SIZE}, Interval: ${this.POLL_INTERVAL}ms)...`);
+        logger.info({ batchSize: this.BATCH_SIZE, interval: this.POLL_INTERVAL }, "Starting Message Processor Worker");
         // Poll based on config
         setInterval(() => this.processBatch(), this.POLL_INTERVAL);
     }
@@ -37,7 +38,7 @@ export class MessageProcessor {
                 .map(s => JSON.parse(s));
 
             if (messages.length > 0) {
-                console.log(`Processing batch of ${messages.length} messages...`);
+                logger.debug({ count: messages.length }, "Processing message batch");
                 
                 // 2. Bulk Insert
                 // We use createMany for speed. `skipDuplicates` handles re-syncs.
@@ -50,7 +51,7 @@ export class MessageProcessor {
             }
 
         } catch (error) {
-            console.error("Error processing message batch:", error);
+            logger.error({ err: error }, "Error processing message batch");
             // Ideally, push back to queue or dead-letter queue
         } finally {
             this.isProcessing = false;
