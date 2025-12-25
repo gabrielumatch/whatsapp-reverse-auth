@@ -1,33 +1,41 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { Message } from '@/components/chat/data';
+import { useInfiniteQuery, useQueryClient, InfiniteData } from '@tanstack/react-query';
+
+const PAGE_SIZE = 50;
 
 export function useWhatsAppMessages(chatId: string | null) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Initial Load
-  useEffect(() => {
-    if (!chatId) {
-        setMessages([]);
-        return;
-    }
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery<Message[], Error, InfiniteData<Message[]>>({
+    queryKey: ['messages', chatId],
+    queryFn: async ({ pageParam }) => {
+      if (!chatId) return [];
+      const cursor = pageParam ? `&cursor=${pageParam}` : '';
+      const res = await fetch(`/api/messages?chatId=${chatId}&limit=${PAGE_SIZE}${cursor}`);
+      return res.json();
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage: Message[]) => {
+      // API returns Newest -> Oldest.
+      // So the last element is the oldest.
+      if (lastPage.length < PAGE_SIZE) return null;
+      return lastPage[lastPage.length - 1]?.id; 
+    },
+    enabled: !!chatId,
+    staleTime: Infinity, 
+  });
 
-    setLoading(true);
-    const fetchInitial = async () => {
-        try {
-            const res = await fetch(`/api/messages?chatId=${chatId}&limit=50`);
-            const data = await res.json();
-            setMessages(data);
-            setHasMore(data.length === 50);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-    fetchInitial();
-  }, [chatId]);
+  // Flatten pages and sort Oldest -> Newest for display
+  const messages = data ? data.pages.flat().sort((a, b) => 
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  ) : [];
 
   // Realtime subscription (SSE)
   useEffect(() => {
@@ -39,19 +47,35 @@ export function useWhatsAppMessages(chatId: string | null) {
         try {
             const newMessage = JSON.parse(event.data) as Message;
             
-            setMessages(prev => {
-                const existing = prev.find(m => m.id === newMessage.id);
-                
-                if (existing) {
-                    // Update existing message (e.g. status change)
-                    return prev.map(m => m.id === newMessage.id ? newMessage : m);
-                } else {
-                    // Append new message
-                    return [...prev, newMessage].sort((a, b) => 
-                        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-                    );
+            queryClient.setQueryData<InfiniteData<Message[]>>(['messages', chatId], (oldData) => {
+                if (!oldData) return oldData;
+
+                let updated = false;
+
+                const newPages = oldData.pages.map((page: Message[]) => {
+                    const exists = page.find(m => m.id === newMessage.id);
+                    if (exists) {
+                        updated = true;
+                        return page.map(m => m.id === newMessage.id ? newMessage : m);
+                    }
+                    return page;
+                });
+
+                if (!updated) {
+                   // Append to the start of the first page (Newest chunk)
+                   if (newPages.length > 0) {
+                       newPages[0] = [newMessage, ...newPages[0]];
+                   } else {
+                       newPages[0] = [newMessage];
+                   }
                 }
+
+                return {
+                    ...oldData,
+                    pages: newPages
+                };
             });
+
         } catch (e) {
             console.error("Failed to parse SSE message:", e);
         }
@@ -59,36 +83,18 @@ export function useWhatsAppMessages(chatId: string | null) {
 
     eventSource.onerror = (err) => {
         console.error("SSE Error:", err);
-        // EventSource automatically retries, but we can handle specific errors here
-        // or close if fatal.
     };
 
     return () => {
         eventSource.close();
     };
-  }, [chatId]);
+  }, [chatId, queryClient]);
 
-  const loadMore = useCallback(async () => {
-      if (!chatId || messages.length === 0) return;
-      
-      const oldestMsg = messages[0];
-      try {
-          const res = await fetch(`/api/messages?chatId=${chatId}&cursor=${oldestMsg.id}&limit=50`);
-          const olderMessages = await res.json();
-          
-          if (olderMessages.length < 50) setHasMore(false);
-          
-          if (olderMessages.length > 0) {
-              setMessages(prev => {
-                  const existingIds = new Set(prev.map(m => m.id));
-                  const uniqueOlder = olderMessages.filter((m: Message) => !existingIds.has(m.id));
-                  return [...uniqueOlder, ...prev];
-              });
-          }
-      } catch (e) {
-          console.error(e);
-      }
-  }, [chatId, messages]);
-
-  return { messages, loading, loadMore, hasMore };
+  return { 
+    messages, 
+    loading: isLoading, 
+    loadMore: fetchNextPage, 
+    hasMore: hasNextPage,
+    isFetchingMore: isFetchingNextPage 
+  };
 }
