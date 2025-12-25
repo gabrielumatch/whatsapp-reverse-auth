@@ -56,7 +56,7 @@ export class WhatsAppBot {
 
       this.logger.info('WhatsApp bot started successfully');
     } catch (error) {
-      this.logger.error('Error starting WhatsApp bot:', error);
+      this.logger.error({ error }, 'Error starting WhatsApp bot');
       await this.handleReconnect();
     }
   }
@@ -68,7 +68,7 @@ export class WhatsAppBot {
       const shouldReconnect =
         (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
 
-      this.logger.info('Connection closed. Reconnecting:', shouldReconnect);
+      this.logger.info({ shouldReconnect }, 'Connection closed. Reconnecting');
 
       if (shouldReconnect && this.shouldReconnect) {
         this.handleReconnect();
@@ -157,7 +157,7 @@ export class WhatsAppBot {
         text: '✅ Verification successful! Your phone number has been verified.',
       });
     } catch (error) {
-      this.logger.error('Error sending confirmation message:', error);
+      this.logger.error({ error }, 'Error sending confirmation message');
     }
   }
 

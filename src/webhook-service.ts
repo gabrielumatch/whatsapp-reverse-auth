@@ -35,7 +35,7 @@ export class WebhookService {
 
       this.logger.info('Webhook notification sent successfully');
     } catch (error) {
-      this.logger.error('Error sending webhook notification:', error);
+      this.logger.error({ error }, 'Error sending webhook notification');
       // Don't throw error to avoid disrupting the main flow
     }
   }
