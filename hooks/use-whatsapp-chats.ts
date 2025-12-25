@@ -98,7 +98,7 @@ export function useWhatsAppChats() {
                   new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
               );
           });
-      }, 3000);
+      }, 10000);
 
       return () => clearInterval(interval);
   }, [sessionId, fetchChats]);

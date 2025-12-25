@@ -29,49 +29,43 @@ export function useWhatsAppMessages(chatId: string | null) {
     fetchInitial();
   }, [chatId]);
 
-  // Polling for new messages
+  // Realtime subscription (SSE)
   useEffect(() => {
     if (!chatId) return;
 
-    const pollMessages = async () => {
+    const eventSource = new EventSource(`/api/stream/messages?chatId=${chatId}`);
+
+    eventSource.onmessage = (event) => {
         try {
-            // Fetch latest 20
-            const res = await fetch(`/api/messages?chatId=${chatId}&limit=20`);
-            const newBatch = await res.json();
+            const newMessage = JSON.parse(event.data) as Message;
             
             setMessages(prev => {
-                const existingIds = new Set(prev.map(m => m.id));
-                const uniqueNew = newBatch.filter((m: Message) => !existingIds.has(m.id));
+                const existing = prev.find(m => m.id === newMessage.id);
                 
-                if (uniqueNew.length === 0) {
-                    // Check for status updates on existing messages
-                    // Simple check: if status changed.
-                    // For now, just replace the tail if overlap? 
-                    // Let's just append unique. Status updates might require full re-fetch or map.
-                    // To handle status updates (sent -> delivered), we should update existing messages if ID matches.
-                    return prev.map(m => {
-                        const updated = newBatch.find((n: Message) => n.id === m.id);
-                        return updated ? updated : m;
-                    });
+                if (existing) {
+                    // Update existing message (e.g. status change)
+                    return prev.map(m => m.id === newMessage.id ? newMessage : m);
+                } else {
+                    // Append new message
+                    return [...prev, newMessage].sort((a, b) => 
+                        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                    );
                 }
-                
-                // If we have unique new messages (that are newer than our tail), append them.
-                // Note: `newBatch` is sorted Old->New.
-                // We only want to append messages that are strictly newer than our last message?
-                // Or just merge and sort?
-                // Safest: Merge and Sort by timestamp.
-                const combined = [...prev, ...uniqueNew].sort((a, b) => 
-                    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-                );
-                return combined;
             });
         } catch (e) {
-            console.error(e);
+            console.error("Failed to parse SSE message:", e);
         }
     };
 
-    const interval = setInterval(pollMessages, 2000);
-    return () => clearInterval(interval);
+    eventSource.onerror = (err) => {
+        console.error("SSE Error:", err);
+        // EventSource automatically retries, but we can handle specific errors here
+        // or close if fatal.
+    };
+
+    return () => {
+        eventSource.close();
+    };
   }, [chatId]);
 
   const loadMore = useCallback(async () => {

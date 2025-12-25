@@ -76,7 +76,7 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     // 4. Save to Database
     try {
-        await messageRepo.create({
+        const newMessage = await messageRepo.create({
             chatId,
             sessionId,
             messageId,
@@ -89,6 +89,10 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
             isFromMe: isFromMe,
             status: "delivered", 
         });
+
+        // Publish to Redis for Realtime updates
+        await ctx.redis.publish(`updates:chat:${chatId}`, JSON.stringify(newMessage));
+        
     } catch (err) {
         console.error("Error saving message:", err);
     }
