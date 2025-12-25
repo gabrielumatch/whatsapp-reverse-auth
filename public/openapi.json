@@ -75,6 +75,43 @@
         ],
         "responses": { "200": { "description": "Successful response" } }
       }
+    },
+    "/api/auth/challenge": {
+      "post": {
+        "summary": "Generate an authentication challenge",
+        "tags": ["Auth"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metadata": { "type": "object", "description": "Optional data to attach" },
+                  "ttl": { "type": "integer", "default": 600, "description": "Time-to-live in seconds" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Challenge generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "whatsapp_url": { "type": "string", "nullable": true },
+                    "bot_number": { "type": "string", "nullable": true },
+                    "expiresAt": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

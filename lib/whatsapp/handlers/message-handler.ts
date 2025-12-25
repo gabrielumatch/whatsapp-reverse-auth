@@ -4,6 +4,7 @@ import { getOrCreateChat } from "./chat-handler";
 import { syncContact } from "./contact-handler";
 import { downloadAndUploadMedia } from "./media-handler";
 import { logger } from "@/lib/logger";
+import { ChallengeManager } from "@/lib/auth/challenge-manager";
 
 /**
  * Main processor for incoming and synced messages.
@@ -48,6 +49,23 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
         text = "🔘 Interactive Message";
     } else {
         text = msgType; // Fallback to type name
+    }
+
+    // Check for Auth Challenge
+    if (!isFromMe && text) {
+        const match = text.trim().match(/^Auth Token:\s*([A-F0-9]{8})$/i);
+        if (match) {
+            const token = match[1].toUpperCase();
+            try {
+                const verified = await ChallengeManager.verify(token, remoteJid);
+                if (verified) {
+                    logger.info({ token, jid: remoteJid }, "Auth Challenge Verified");
+                    await sock.sendMessage(remoteJid, { text: "✅ Authentication successful! You may close this chat." });
+                }
+            } catch (e) {
+                logger.error({ err: e }, "Error verifying challenge");
+            }
+        }
     }
 
     // Determine Display Name logic

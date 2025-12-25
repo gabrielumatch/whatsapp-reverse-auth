@@ -4,10 +4,11 @@ import { handleIncomingMessage } from '../../lib/whatsapp/handlers/message-handl
 import { BotContext } from '../../lib/whatsapp/types';
 
 // Mocks
-const { mockGetOrCreateChat, mockDownloadAndUploadMedia, mockSyncContact } = vi.hoisted(() => ({
+const { mockGetOrCreateChat, mockDownloadAndUploadMedia, mockSyncContact, mockVerifyChallenge } = vi.hoisted(() => ({
     mockGetOrCreateChat: vi.fn(),
     mockDownloadAndUploadMedia: vi.fn(),
-    mockSyncContact: vi.fn().mockResolvedValue(undefined)
+    mockSyncContact: vi.fn().mockResolvedValue(undefined),
+    mockVerifyChallenge: vi.fn()
 }));
 
 vi.mock('../../lib/whatsapp/handlers/chat-handler', () => ({
@@ -22,9 +23,14 @@ vi.mock('../../lib/whatsapp/handlers/contact-handler', () => ({
     syncContact: mockSyncContact
 }));
 
+vi.mock('@/lib/auth/challenge-manager', () => ({
+    ChallengeManager: { verify: mockVerifyChallenge }
+}));
+
 describe('MessageHandler', () => {
     let mockCtx: BotContext;
     let mockMessageRepo: any;
+    let mockSock: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -32,12 +38,34 @@ describe('MessageHandler', () => {
             findById: vi.fn(),
             create: vi.fn()
         };
+        mockSock = {
+            user: { id: 'me@s.whatsapp.net' },
+            sendMessage: vi.fn()
+        };
         mockCtx = {
             sessionId: 'test_session',
-            sock: { user: { id: 'me@s.whatsapp.net' } },
+            sock: mockSock,
             messageRepo: mockMessageRepo,
             redis: { publish: vi.fn() }
         } as unknown as BotContext;
+    });
+
+    it('should verify auth token message', async () => {
+        const msg = {
+            key: { remoteJid: 'user@s.whatsapp.net', id: 'auth_1', fromMe: false },
+            message: { conversation: 'Auth Token: A1B2C3D4' },
+            messageTimestamp: 1000
+        };
+        mockGetOrCreateChat.mockResolvedValue('chat_1');
+        mockVerifyChallenge.mockResolvedValue(true); // Verified
+
+        await handleIncomingMessage(mockCtx, msg as any);
+
+        expect(mockVerifyChallenge).toHaveBeenCalledWith('A1B2C3D4', 'user@s.whatsapp.net');
+        expect(mockSock.sendMessage).toHaveBeenCalledWith(
+            'user@s.whatsapp.net', 
+            expect.objectContaining({ text: expect.stringContaining('Authentication successful') })
+        );
     });
 
     it('should ignore messages without content', async () => {
