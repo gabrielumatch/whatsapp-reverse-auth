@@ -68,7 +68,14 @@ export class ApiServer {
     });
 
     // Token verification status endpoint
-    this.fastify.get('/token/:token/status', async (request, reply) => {
+    this.fastify.get('/token/:token/status', {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute'
+        }
+      }
+    }, async (request, reply) => {
       const { token } = request.params as { token: string };
       
       const isValid = this.tokenService.verifyToken(token);
