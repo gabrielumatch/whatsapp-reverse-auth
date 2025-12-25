@@ -34,7 +34,7 @@ const data = {
     },
     {
       title: "Chats",
-      url: "#",
+      url: "/protected/chats",
       icon: IconMessage2,
     },
     {
