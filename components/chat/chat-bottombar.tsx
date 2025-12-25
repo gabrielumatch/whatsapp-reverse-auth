@@ -1,27 +1,37 @@
 import {
   IconMicrophone,
+  IconMoodSmile,
   IconPaperclip,
   IconPlus,
   IconSend,
-  IconMoodSmile,
 } from "@tabler/icons-react";
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Message, loggedInUserData } from "@/components/chat/data";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface ChatBottombarProps {
   sendMessage: (newMessage: Message) => void;
   isMobile: boolean;
 }
 
+const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏", "🤝", "⭐"];
+
 export function ChatBottombar({
   sendMessage,
   isMobile,
 }: ChatBottombarProps) {
   const [message, setMessage] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(event.target.value);
@@ -30,10 +40,12 @@ export function ChatBottombar({
   const handleSend = () => {
     if (message.trim()) {
       const newMessage: Message = {
-        id: message.length + 1,
+        id: Date.now(),
         name: loggedInUserData.name,
         avatar: loggedInUserData.avatar,
         message: message.trim(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: "sent",
       };
       sendMessage(newMessage);
       setMessage("");
@@ -51,40 +63,100 @@ export function ChatBottombar({
     }
   };
 
+  const onEmojiSelect = (emoji: string) => {
+    setMessage((prev) => prev + emoji);
+    inputRef.current?.focus();
+  };
+
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      toast.success(`File selected: ${file.name} (Simulation)`);
+      // Reset input
+      event.target.value = "";
+    }
+  };
+
+  const toggleRecording = () => {
+    setIsRecording(!isRecording);
+    if (!isRecording) {
+      toast.info("Recording started... (Simulation)");
+    } else {
+      toast.success("Recording saved! (Simulation)");
+    }
+  };
+
   return (
-    <div className="p-2 flex justify-between w-full items-center gap-2">
+    <div className="p-2 flex justify-between w-full items-center gap-2 border-t">
       <div className="flex">
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleFileChange}
+        />
         <Button
           variant="ghost"
           size="icon"
-          className={cn("h-9 w-9", "dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white shrink-0")}
+          className={cn("h-9 w-9", "shrink-0")}
+          onClick={handleFileClick}
         >
           <IconPlus className="text-muted-foreground" size={20} />
         </Button>
       </div>
 
-      <div className="w-full relative">
-        <Input
-          ref={inputRef}
-          className="w-full border rounded-full flex items-center h-9 resize-none overflow-hidden bg-background"
-          placeholder="Type a message..."
-          value={message}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyPress}
-        />
+      <div className="w-full relative flex items-center">
+        {isRecording ? (
+          <div className="flex-1 h-9 flex items-center px-4 bg-muted rounded-full animate-pulse text-destructive font-medium text-sm">
+            Recording...
+          </div>
+        ) : (
+          <Input
+            ref={inputRef}
+            className="w-full border rounded-full flex items-center h-9 resize-none overflow-hidden bg-background"
+            placeholder="Type a message..."
+            value={message}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyPress}
+          />
+        )}
+        
         <div className="absolute right-2 top-0.5">
-           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-          >
-             <IconMoodSmile className="text-muted-foreground" size={20} />
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={isRecording}
+              >
+                <IconMoodSmile className="text-muted-foreground" size={20} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-2" side="top" align="end">
+              <div className="grid grid-cols-5 gap-2">
+                {EMOJIS.map((emoji) => (
+                  <Button
+                    key={emoji}
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => onEmojiSelect(emoji)}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
       <div className="flex">
-        {message.trim() ? (
+        {message.trim() && !isRecording ? (
           <Button
             className="h-9 w-9 shrink-0"
             variant="default"
@@ -95,11 +167,15 @@ export function ChatBottombar({
           </Button>
         ) : (
           <Button
-            className="h-9 w-9 shrink-0"
+            className={cn(
+              "h-9 w-9 shrink-0",
+              isRecording && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            )}
             variant="ghost"
             size="icon"
+            onClick={toggleRecording}
           >
-            <IconMicrophone className="text-muted-foreground" size={20} />
+            <IconMicrophone size={20} />
           </Button>
         )}
       </div>
