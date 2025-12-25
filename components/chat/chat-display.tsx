@@ -4,15 +4,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ChatBottombar } from "@/components/chat/chat-bottombar";
 import {
-  IconCheck,
-  IconChecks,
   IconDotsVertical,
   IconPhone,
   IconVideo,
+  IconInfoCircle
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { TextMessage, ImageMessage, VideoMessage, AudioMessage, DocumentMessage } from "./message-types";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ChatDetails } from "./chat-details";
+import { IconChecks, IconCheck } from "@tabler/icons-react";
 
 interface ChatDisplayProps {
   selectedChat: Chat;
@@ -96,22 +98,30 @@ export function ChatDisplay({
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex items-center justify-between p-4 border-b bg-background z-10">
-        <div className="flex items-center gap-2">
-          <Avatar>
-            <AvatarImage src={selectedChat.avatar_url || undefined} alt={selectedChat.name} />
-            <AvatarFallback>{selectedChat.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <div className="font-semibold">{selectedChat.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {isTyping ? (
-                 <span className="text-primary font-medium animate-pulse">Typing...</span>
-              ) : (
-                <span className="text-muted-foreground">Online</span>
-              )}
-            </div>
-          </div>
-        </div>
+        <Sheet>
+            <SheetTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <Avatar>
+                    <AvatarImage src={selectedChat.avatar_url || undefined} alt={selectedChat.name} />
+                    <AvatarFallback>{selectedChat.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                    <div className="font-semibold">{selectedChat.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                    {isTyping ? (
+                        <span className="text-primary font-medium animate-pulse">Typing...</span>
+                    ) : (
+                        <span className="text-muted-foreground">Online</span>
+                    )}
+                    </div>
+                </div>
+                </div>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[540px] p-0">
+                <ChatDetails chat={selectedChat} />
+            </SheetContent>
+        </Sheet>
+
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon">
             <IconVideo className="size-5 text-muted-foreground" />
@@ -119,9 +129,16 @@ export function ChatDisplay({
           <Button variant="ghost" size="icon">
             <IconPhone className="size-5 text-muted-foreground" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <IconDotsVertical className="size-5 text-muted-foreground" />
-          </Button>
+          <Sheet>
+             <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <IconInfoCircle className="size-5 text-muted-foreground" />
+                </Button>
+             </SheetTrigger>
+             <SheetContent className="w-[400px] sm:w-[540px] p-0">
+                <ChatDetails chat={selectedChat} />
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 

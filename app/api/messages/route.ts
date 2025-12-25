@@ -6,14 +6,29 @@ export async function GET(request: NextRequest) {
     const chatId = searchParams.get("chatId");
     const limit = parseInt(searchParams.get("limit") || "50");
     const cursor = searchParams.get("cursor");
+    const type = searchParams.get("type");
+    const search = searchParams.get("search");
 
     if (!chatId) {
         return NextResponse.json({ error: "Missing chatId" }, { status: 400 });
     }
 
     try {
+        const whereClause: any = { chatId };
+        
+        if (type) {
+            whereClause.messageType = type;
+        }
+        
+        if (search) {
+            whereClause.content = {
+                contains: search,
+                mode: 'insensitive'
+            };
+        }
+
         const messages = await prisma.message.findMany({
-            where: { chatId },
+            where: whereClause,
             take: limit,
             skip: cursor ? 1 : 0,
             cursor: cursor ? { id: cursor } : undefined,
