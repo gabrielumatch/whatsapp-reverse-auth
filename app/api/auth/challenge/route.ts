@@ -10,6 +10,25 @@ const createChallengeSchema = z.object({
     ttl: z.number().min(60).max(3600).optional(), // 1 min to 1 hour
 });
 
+const getChallengeSchema = z.object({
+    token: z.string().min(8),
+});
+
+export async function GET(request: NextRequest) {
+    return apiHandler(async () => {
+        const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+        const { token } = getChallengeSchema.parse(searchParams);
+
+        const challenge = await ChallengeManager.get(token);
+
+        if (!challenge) {
+            return NextResponse.json({ error: "Challenge not found or expired" }, { status: 404 });
+        }
+
+        return NextResponse.json(challenge);
+    });
+}
+
 export async function POST(request: NextRequest) {
     return apiHandler(async () => {
         const body = await request.json();

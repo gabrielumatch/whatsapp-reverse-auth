@@ -61,6 +61,16 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
                 if (verified) {
                     logger.info({ token, jid: remoteJid }, "Auth Challenge Verified");
                     await sock.sendMessage(remoteJid, { text: "✅ Authentication successful! You may close this chat." });
+
+                    // Trigger Webhook if present
+                    if (verified.metadata?.webhookUrl && typeof verified.metadata.webhookUrl === 'string') {
+                        const webhookUrl = verified.metadata.webhookUrl;
+                        fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(verified)
+                        }).catch(err => logger.error({ err, webhookUrl }, "Failed to trigger webhook"));
+                    }
                 }
             } catch (e) {
                 logger.error({ err: e }, "Error verifying challenge");

@@ -77,6 +77,17 @@
       }
     },
     "/api/auth/challenge": {
+      "get": {
+        "summary": "Check challenge status",
+        "tags": ["Auth"],
+        "parameters": [
+          { "name": "token", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Challenge status returned" },
+          "404": { "description": "Challenge not found or expired" }
+        }
+      },
       "post": {
         "summary": "Generate an authentication challenge",
         "tags": ["Auth"],

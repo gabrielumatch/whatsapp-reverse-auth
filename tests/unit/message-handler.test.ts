@@ -34,6 +34,7 @@ describe('MessageHandler', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        global.fetch = vi.fn().mockResolvedValue({ ok: true });
         mockMessageRepo = {
             findById: vi.fn(),
             create: vi.fn()
@@ -50,21 +51,28 @@ describe('MessageHandler', () => {
         } as unknown as BotContext;
     });
 
-    it('should verify auth token message', async () => {
+    it('should verify auth token message and trigger webhook', async () => {
         const msg = {
             key: { remoteJid: 'user@s.whatsapp.net', id: 'auth_1', fromMe: false },
             message: { conversation: 'Auth Token: A1B2C3D4' },
             messageTimestamp: 1000
         };
         mockGetOrCreateChat.mockResolvedValue('chat_1');
-        mockVerifyChallenge.mockResolvedValue(true); // Verified
+        mockVerifyChallenge.mockResolvedValue({ 
+            status: 'verified', 
+            metadata: { webhookUrl: 'http://example.com/hook' } 
+        });
 
         await handleIncomingMessage(mockCtx, msg as any);
 
         expect(mockVerifyChallenge).toHaveBeenCalledWith('A1B2C3D4', 'user@s.whatsapp.net');
-        expect(mockSock.sendMessage).toHaveBeenCalledWith(
-            'user@s.whatsapp.net', 
-            expect.objectContaining({ text: expect.stringContaining('Authentication successful') })
+        expect(mockSock.sendMessage).toHaveBeenCalled();
+        expect(global.fetch).toHaveBeenCalledWith(
+            'http://example.com/hook',
+            expect.objectContaining({
+                method: 'POST',
+                body: expect.stringContaining('verified')
+            })
         );
     });
 
