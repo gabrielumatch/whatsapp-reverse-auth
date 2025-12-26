@@ -21,6 +21,9 @@ RUN npx prisma generate
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
+# Set dummy environment variables to allow build to proceed without a real DB connection
+ENV DATABASE_URL="postgresql://user:password@localhost:5432/whatsapp_db"
+ENV AUTH_SECRET="dummy_secret_for_build"
 RUN npm run build
 
 # Production image, copy all the files and run next
