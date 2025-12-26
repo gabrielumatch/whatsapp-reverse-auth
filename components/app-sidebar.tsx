@@ -10,7 +10,6 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react"
-import { type User } from "@supabase/supabase-js"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
+  // ... data object remains same
   navMain: [
     {
       title: "Dashboard",
@@ -69,11 +69,12 @@ const data = {
   ],
 }
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: User }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user: any }) {
   const navUser = {
-    name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+    name: user.name || user.email?.split("@")[0] || "User",
     email: user.email || "",
-    avatar: user.user_metadata?.avatar_url || "",
+    avatar: user.image || "",
   }
 
   return (

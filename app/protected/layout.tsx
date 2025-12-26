@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,19 +31,16 @@ async function ProtectedLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  const session = await auth();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session?.user) {
     return redirect("/auth/login");
   }
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <AppSidebar user={session.user as any} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 pr-4">
           <div className="flex items-center gap-2 px-4">
