@@ -30,6 +30,7 @@ describe('Auth API Integration', () => {
     });
 
     it('POST should create a challenge', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (ChallengeManager.create as any).mockResolvedValue({
             token: 'ABC12345',
             status: 'pending',
@@ -51,6 +52,7 @@ describe('Auth API Integration', () => {
     });
 
     it('GET should retrieve a challenge', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (ChallengeManager.get as any).mockResolvedValue({
             token: 'ABC12345',
             status: 'verified'
@@ -65,6 +67,7 @@ describe('Auth API Integration', () => {
     });
 
     it('GET should return 404 for invalid token', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (ChallengeManager.get as any).mockResolvedValue(null);
 
         const req = new NextRequest('http://localhost/api/auth/challenge?token=INVALID_TOKEN');
