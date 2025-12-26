@@ -50,6 +50,7 @@ cp .env.example .env
 | `DATABASE_URL` | PostgreSQL connection string (defaults to local docker) |
 | `REDIS_URL` | Redis connection string (defaults to local docker) |
 | `SESSION_ID` | The unique ID for your bot session (e.g., `prod_v1`) |
+| `AUTH_SECRET` | Secret key for session encryption (Auth.js) |
 | `MESSAGE_BATCH_SIZE` | How many messages to sync at once (default: 100) |
 
 ### 4. Database Initialization
