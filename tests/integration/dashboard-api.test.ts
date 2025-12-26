@@ -21,8 +21,11 @@ describe('Dashboard API', () => {
     });
 
     it('GET /stats should return aggregated counts', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prisma.session.count as any).mockResolvedValue(5);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prisma.message.count as any).mockResolvedValue(100); // For both total and today calls
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prisma.authEvent.count as any).mockResolvedValue(20); // For both total and verified calls
 
         const res = await getStats();
@@ -42,6 +45,7 @@ describe('Dashboard API', () => {
             { date: new Date('2024-01-01'), count: BigInt(10) },
             { date: new Date('2024-01-02'), count: BigInt(20) }
         ];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prisma.$queryRaw as any).mockResolvedValue(mockData);
 
         const res = await getActivity();
@@ -61,6 +65,7 @@ describe('Dashboard API', () => {
                 chat: { name: 'User 1', jid: '123@s.whatsapp.net' } 
             }
         ];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prisma.message.findMany as any).mockResolvedValue(mockMessages);
 
         const res = await getRecent();
