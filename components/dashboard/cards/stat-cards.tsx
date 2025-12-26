@@ -3,8 +3,15 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getActiveSessionsCount, getAuthAttemptsTodayCount, getAuthVerifiedTodayCount } from "@/lib/data/dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface StatCardProps {
+    title: string;
+    icon: React.ElementType;
+    value: number | string;
+    description: string;
+}
+
 // Generic Stat Card UI
-function StatCard({ title, icon: Icon, value, description }: any) {
+function StatCard({ title, icon: Icon, value, description }: StatCardProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
