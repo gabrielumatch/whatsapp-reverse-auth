@@ -53,9 +53,13 @@ export async function handleIncomingMessage(ctx: BotContext, m: WAMessage) {
 
     // Check for Auth Challenge
     if (!isFromMe && text) {
-        const match = text.trim().match(/^Auth Token:\s*([A-F0-9]{8})$/i);
+        const prefixes = (process.env.AUTH_PREFIXES || "Auth Token:").split(',').map(p => p.trim()).filter(Boolean);
+        const escapedPrefixes = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+        const regex = new RegExp(`^(${escapedPrefixes})\\s*([A-F0-9]{8})$`, 'i');
+
+        const match = text.trim().match(regex);
         if (match) {
-            const token = match[1].toUpperCase();
+            const token = match[2].toUpperCase();
             try {
                 const verified = await ChallengeManager.verify(token, remoteJid);
                 if (verified) {

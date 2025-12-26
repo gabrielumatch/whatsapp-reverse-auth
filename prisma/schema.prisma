@@ -19,6 +19,7 @@ model Session {
   messages     Message[]
   contacts     Contact[]
 
+  @@index([status])
   @@map("whatsapp_sessions")
 }
 
@@ -80,6 +81,7 @@ model Message {
   @@unique([sessionId, messageId])
   @@index([chatId, timestamp(sort: Desc)])
   @@index([sessionId])
+  @@index([createdAt])
   @@map("whatsapp_messages")
 }
 

@@ -16,8 +16,6 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { useDashboardActivity } from "@/hooks/use-dashboard"
-import { Skeleton } from "@/components/ui/skeleton"
 
 export const description = "Auth Activity Chart"
 
@@ -28,13 +26,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartAreaInteractive() {
-  const { data, isLoading } = useDashboardActivity();
+interface ActivityData {
+    date: string;
+    count: number;
+}
 
-  if (isLoading || !data) {
-      return <Skeleton className="w-full h-[250px] rounded-xl" />;
-  }
-  
+export function ChartAreaInteractive({ data }: { data: ActivityData[] }) {
   return (
     <Card className="@container/card">
       <CardHeader>

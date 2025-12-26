@@ -16,10 +16,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { useRecentActivity, RecentActivity } from "@/hooks/use-dashboard"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { formatRelativeTime } from "@/lib/utils"
+import { Message } from "@/components/chat/data"
+
+export interface RecentActivity extends Message {
+    chat_name: string;
+}
 
 const columns: ColumnDef<RecentActivity>[] = [
   {
@@ -48,18 +51,12 @@ const columns: ColumnDef<RecentActivity>[] = [
   },
 ]
 
-export function DataTable() {
-  const { data = [], isLoading } = useRecentActivity();
-
+export function DataTable({ data }: { data: RecentActivity[] }) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
-
-  if (isLoading) {
-      return <Skeleton className="w-full h-[300px] rounded-xl" />;
-  }
 
   return (
     <Card className="@container/card">

@@ -51,6 +51,7 @@ cp .env.example .env
 | `REDIS_URL` | Redis connection string (defaults to local docker) |
 | `SESSION_ID` | The unique ID for your bot session (e.g., `prod_v1`) |
 | `AUTH_SECRET` | Secret key for session encryption (Auth.js) |
+| `AUTH_PREFIXES` | Comma-separated list of prefixes for auth messages (default: `Auth Token:`) |
 | `MESSAGE_BATCH_SIZE` | How many messages to sync at once (default: 100) |
 
 ### 4. Database Initialization
