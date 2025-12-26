@@ -1,6 +1,6 @@
 "use client";
 
-import { IconActivity, IconAddressBook, IconMessage, IconServer } from "@tabler/icons-react"
+import { IconActivity, IconCheck, IconLock, IconServer } from "@tabler/icons-react"
 import {
   Card,
   CardHeader,
@@ -23,30 +23,34 @@ export function SectionCards() {
     )
   }
 
+  const requests = data?.authAttemptsToday ?? 0;
+  const verified = data?.authVerifiedToday ?? 0;
+  const rate = requests > 0 ? Math.round((verified / requests) * 100) : 0;
+
   const stats = [
       {
           title: "Active Sessions",
           value: data?.activeSessions ?? 0,
           icon: IconServer,
-          description: "Connected WhatsApp bots"
+          description: "Connected bots"
       },
       {
-          title: "Messages Today",
-          value: data?.messagesToday ?? 0,
+          title: "Auth Requests",
+          value: requests,
+          icon: IconLock,
+          description: "Challenges generated today"
+      },
+      {
+          title: "Verified Users",
+          value: verified,
+          icon: IconCheck,
+          description: "Successful verifications today"
+      },
+      {
+          title: "Success Rate",
+          value: `${rate}%`,
           icon: IconActivity,
-          description: "Incoming & Outgoing traffic"
-      },
-      {
-          title: "Total Messages",
-          value: data?.totalMessages ?? 0,
-          icon: IconMessage,
-          description: "All time history"
-      },
-      {
-          title: "Total Contacts",
-          value: data?.totalContacts ?? 0,
-          icon: IconAddressBook,
-          description: "Unique users encountered"
+          description: "Conversion rate today"
       }
   ];
 

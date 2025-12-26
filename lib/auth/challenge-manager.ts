@@ -1,4 +1,5 @@
 import { redis } from "@/lib/redis";
+import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 
 export interface ChallengeData {
@@ -38,12 +39,22 @@ export class ChallengeManager {
             metadata
         };
 
+        // Store in Redis
         await redis.set(
             `${CHALLENGE_PREFIX}${token}`,
             JSON.stringify(data),
             'EX',
             ttlSeconds
         );
+
+        // Audit Log in Postgres
+        await prisma.authEvent.create({
+            data: {
+                token,
+                status: 'pending',
+                metadata: metadata ? JSON.stringify(metadata) : undefined
+            }
+        });
 
         return data;
     }
@@ -79,6 +90,16 @@ export class ChallengeManager {
 
         // Update Redis, extend TTL to 1 hour to ensure the client has time to poll the success state.
         await redis.set(key, JSON.stringify(updated), 'EX', 3600);
+
+        // Audit Log Update
+        await prisma.authEvent.update({
+            where: { token },
+            data: {
+                status: 'verified',
+                phoneNumber: senderJid.split('@')[0],
+                verifiedAt: new Date()
+            }
+        });
 
         return updated;
     }

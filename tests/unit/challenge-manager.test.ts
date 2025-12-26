@@ -1,12 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChallengeManager } from '../../lib/auth/challenge-manager';
 import { redis } from '@/lib/redis';
+import { prisma } from '@/lib/prisma';
 
 // Mock Redis
 vi.mock('@/lib/redis', () => ({
     redis: {
         set: vi.fn(),
         get: vi.fn()
+    }
+}));
+
+// Mock Prisma
+vi.mock('@/lib/prisma', () => ({
+    prisma: {
+        authEvent: {
+            create: vi.fn(),
+            update: vi.fn()
+        }
     }
 }));
 
@@ -28,6 +39,14 @@ describe('ChallengeManager', () => {
             'EX',
             600
         );
+
+        expect(prisma.authEvent.create).toHaveBeenCalledWith({
+            data: {
+                token: result.token,
+                status: 'pending',
+                metadata: '{"userId":123}'
+            }
+        });
     });
 
     it('should verify a valid pending challenge', async () => {
@@ -55,6 +74,16 @@ describe('ChallengeManager', () => {
             'EX',
             3600
         );
+
+        // Should update Postgres
+        expect(prisma.authEvent.update).toHaveBeenCalledWith({
+            where: { token },
+            data: {
+                status: 'verified',
+                phoneNumber: 'user',
+                verifiedAt: expect.any(Date)
+            }
+        });
     });
 
     it('should reject invalid or expired token', async () => {
@@ -78,5 +107,6 @@ describe('ChallengeManager', () => {
         // Should return existing without update
         expect(result).toEqual(mockData);
         expect(redis.set).not.toHaveBeenCalled();
+        expect(prisma.authEvent.update).not.toHaveBeenCalled();
     });
 });

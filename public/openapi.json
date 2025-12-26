@@ -123,6 +123,27 @@
           }
         }
       }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "summary": "Get dashboard summary statistics",
+        "tags": ["Dashboard"],
+        "responses": { "200": { "description": "Successful response" } }
+      }
+    },
+    "/api/dashboard/activity": {
+      "get": {
+        "summary": "Get activity chart data",
+        "tags": ["Dashboard"],
+        "responses": { "200": { "description": "Successful response" } }
+      }
+    },
+    "/api/dashboard/recent": {
+      "get": {
+        "summary": "Get recent activity messages",
+        "tags": ["Dashboard"],
+        "responses": { "200": { "description": "Successful response" } }
+      }
     }
   }
 }

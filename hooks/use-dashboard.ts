@@ -5,7 +5,8 @@ interface DashboardStats {
     activeSessions: number;
     totalMessages: number;
     messagesToday: number;
-    totalContacts: number;
+    authAttemptsToday: number;
+    authVerifiedToday: number;
 }
 
 interface ActivityData {

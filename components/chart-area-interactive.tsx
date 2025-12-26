@@ -19,11 +19,11 @@ import {
 import { useDashboardActivity } from "@/hooks/use-dashboard"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export const description = "Message Activity Chart"
+export const description = "Auth Activity Chart"
 
 const chartConfig = {
-  messages: {
-    label: "Messages",
+  auth: {
+    label: "Auth Requests",
     color: "var(--primary)",
   },
 } satisfies ChartConfig
@@ -34,16 +34,13 @@ export function ChartAreaInteractive() {
   if (isLoading || !data) {
       return <Skeleton className="w-full h-[250px] rounded-xl" />;
   }
-
-  // Ensure data is sorted (API should do it, but good to be safe)
-  // And format if needed. API returns YYYY-MM-DD.
   
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Message Activity</CardTitle>
+        <CardTitle>Auth Activity</CardTitle>
         <CardDescription>
-          Daily message volume for the last 7 days
+          Daily authentication challenges generated
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -53,15 +50,15 @@ export function ChartAreaInteractive() {
         >
           <AreaChart data={data}>
             <defs>
-              <linearGradient id="fillMessages" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillAuth" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-messages)"
+                  stopColor="var(--color-auth)"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-messages)"
+                  stopColor="var(--color-auth)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
@@ -98,8 +95,8 @@ export function ChartAreaInteractive() {
             <Area
               dataKey="count"
               type="natural"
-              fill="url(#fillMessages)"
-              stroke="var(--color-messages)"
+              fill="url(#fillAuth)"
+              stroke="var(--color-auth)"
               stackId="a"
             />
           </AreaChart>
