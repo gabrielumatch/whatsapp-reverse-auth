@@ -1,4 +1,11 @@
 {
+  "name": "whatsapp-reverse-auth",
+  "version": "0.0.0-development",
+  "description": "Free Open Source WhatsApp Authentication System",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gabrielumatch/whatsapp-reverse-auth.git"
+  },
   "private": true,
   "type": "module",
   "scripts": {
