@@ -4,6 +4,7 @@ import { getMessages } from "@/lib/data/get-messages";
 import { mapMessageToDto } from "@/lib/mappers";
 import { z } from "zod";
 import { apiHandler } from "@/lib/api-handler";
+import { connection } from "next/server";
 
 const getQuerySchema = z.object({
     chatId: z.string().uuid(),
@@ -21,6 +22,7 @@ const postBodySchema = z.object({
 
 export async function GET(request: NextRequest) {
     return apiHandler(async () => {
+        await connection();
         const searchParams = Object.fromEntries(request.nextUrl.searchParams);
         const { chatId, limit, cursor, type, search } = getQuerySchema.parse(searchParams);
 

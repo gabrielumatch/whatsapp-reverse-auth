@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
 import { startOfDay } from "date-fns";
+import { connection } from "next/server";
 
 export async function GET() {
     return apiHandler(async () => {
+        await connection();
         const today = startOfDay(new Date());
 
         const [

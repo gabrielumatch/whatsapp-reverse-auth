@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { mapChatToDto, mapMessageToDto } from "@/lib/mappers";
 import { z } from "zod";
 import { apiHandler } from "@/lib/api-handler";
+import { connection } from "next/server";
 
 const querySchema = z.object({
     sessionId: z.string(),
@@ -11,6 +12,7 @@ const querySchema = z.object({
 
 export async function GET(request: NextRequest) {
     return apiHandler(async () => {
+        await connection();
         const searchParams = Object.fromEntries(request.nextUrl.searchParams);
         const { sessionId, query } = querySchema.parse(searchParams);
 

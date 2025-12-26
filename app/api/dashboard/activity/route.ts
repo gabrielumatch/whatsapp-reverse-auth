@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiHandler } from "@/lib/api-handler";
+import { connection } from "next/server";
 
 export async function GET() {
     return apiHandler(async () => {
+        await connection();
         // Fetch last 7 days AUTH activity
         const result = await prisma.$queryRaw<{ date: Date, count: bigint }[]>`
             SELECT DATE_TRUNC('day', created_at) as date, COUNT(*)::int as count 

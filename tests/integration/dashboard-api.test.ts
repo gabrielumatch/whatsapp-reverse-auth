@@ -15,6 +15,15 @@ vi.mock('@/lib/prisma', () => ({
     }
 }));
 
+// Mock next/server connection
+vi.mock('next/server', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('next/server')>();
+    return {
+        ...actual,
+        connection: vi.fn().mockResolvedValue(undefined),
+    };
+});
+
 describe('Dashboard API', () => {
     beforeEach(() => {
         vi.clearAllMocks();

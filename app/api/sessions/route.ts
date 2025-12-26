@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { apiHandler } from "@/lib/api-handler";
+import { connection } from "next/server";
 
 const deleteSchema = z.object({
     sessionId: z.string().min(1),
@@ -9,6 +10,7 @@ const deleteSchema = z.object({
 
 export async function GET() {
     return apiHandler(async () => {
+        await connection();
         const sessions = await prisma.session.findMany({
             orderBy: { updatedAt: 'desc' }
         });
